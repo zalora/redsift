@@ -1,0 +1,33 @@
+name:                redsift
+version:             0.1.0
+synopsis:            Redshift web app for browsing and querying
+license:             GPL-3
+license-file:        LICENSE
+author:              Chris Forno
+maintainer:          jekor@jekor.com
+copyright:           2013 Zalora
+category:            Database
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable redsift
+  main-is:             redsift.hs
+  build-depends:       aeson,
+                       base >=4.6 && <4.7,
+                       bytestring,
+                       cgi,
+                       containers,
+                       filepath,
+                       MissingH,
+                       mtl,
+                       network,
+                       postgresql-libpq,
+                       postgresql-simple,
+                       split,
+                       sscgi >= 0.3,
+                       text,
+                       utf8-string
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings
+  other-extensions:    FlexibleInstances
+  ghc-options:         -Wall -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-unused-do-bind -threaded -O2
