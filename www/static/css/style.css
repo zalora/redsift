@@ -1,0 +1,72 @@
+.rs-heading {
+    font-weight: 100;
+    border-bottom: 1px solid #EEE;
+    padding-left: 3px;
+}
+
+.faded {
+    color: #AAA;
+}
+
+.content {
+    margin: 0 auto 50px;
+    margin-left: 170px;
+    max-width: 1200px;
+    padding: 0 2em;
+}
+
+#options {
+    background: none repeat scroll 0 0 #FFF;
+    box-shadow: 1px 0px 5px #EEE;
+    bottom: 0;
+    left: 170px;
+    margin-left: -170px;
+    overflow-y: auto;
+    position: fixed;
+    top: 0;
+    width: 170px;
+    z-index: 1000;
+}
+
+#options li {
+    font-size: 0.75em;
+}
+
+#options p {
+    padding-left: 3px;
+}
+
+#query_builder {
+    display: none;
+}
+
+#data_inspector {
+    margin-top: 25px;
+}
+
+/* override some Pure stuff */
+.pure-menu.pure-menu-open, .pure-menu.pure-menu-horizontal li .pure-menu-children {
+    border-right: 0px;
+    border-left: 0px;
+}
+
+.pure-menu-selected {
+    background-color: #F44;
+}
+
+table {
+    border-spacing: 1px;
+    border-collapse: separate;
+}
+
+hr {
+    border: 0px;
+    border-bottom: 1px dotted #CCC;
+}
+
+small {
+    background-color: #333;
+    color: #DDD;
+    padding: 3px 7px 3px 7px;
+    margin-bottom: 5px;
+}

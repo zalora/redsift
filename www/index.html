@@ -1,0 +1,341 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>RedSift - A web administration tool for Amazon Redshift.</title>
+    <link rel="stylesheet" href="static/css/pure-min.css">
+    <link rel="stylesheet" href="static/css/style.css">
+    <link rel="stylesheet" href="static/css/ionicons.min.css">
+    <link rel="stylesheet" href="static/css/tablesorterstyle.css">
+    <link rel="stylesheet" href="static/css/jquery.mCustomScrollbar.css">
+    <link rel="stylesheet" href="static/css/codemirror.css">
+    <script src="static/js/jquery-1.10.2.min.js"></script>
+    <script src="static/js/underscore-min.js"></script>
+    <script src="static/js/backbone-min.js"></script>
+  </head>
+  <body>
+    
+    <div class="pure-g-r" id="layout">
+      <div class="pure-u">
+        <div id="options">
+          <h1 class="rs-heading">
+            <img src="static/graphics/redsift.png"><br>
+            <span style="color:red">RED</span><span style="color:#AAA">SIFT</span>
+          </h1>
+          <p class="faded">EXPLORE</p>
+          <div class="pure-menu pure-menu-open">
+            <a class="pure-menu-heading">Databases</a>
+            <ul id="databasesList">
+            </ul>
+          </div>
+          <div class="pure-menu pure-menu-open">
+            <a class="pure-menu-heading" id="rs-tables">Tables</a>
+            <input type="text" id="searchTables" style="width:135px;">
+            <ul id="tablesList">
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="pure-u-1" id="viewer">
+        <div class="content">
+          <p><small class="ion-code">Query builder</small></p>
+          <button class="ion-ios7-arrow-down" id="query_builder_toggle"></button>
+          <div id="query_builder">
+            <form class="pure-form">
+              <textarea id="sql_editor"></textarea>
+              <br>
+              <button id="query_builder_submit" class="pure-button">Query</button>
+            </form>
+          </div>
+          <hr>
+          <small class="ion-ios7-search-strong">Data Inspector</small>
+          <div id="data_inspector">
+            <table class="tablesorter" id="data-tbl">
+              <thead>
+                <tr>  
+                  <th>session_ids</th>
+                  <th>channel</th>
+                  <th>partner</th>
+                  <th>campaign</th>
+                  <th>content_ad_group</th>
+                  <th>advertising_media</th>
+                  <th>visits</th>
+                  <th>country</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>SEO NonBrand</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>300000002913600092</td> 
+                  <td>Referrals</td>
+                  <td></td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>SG</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+                <tr>
+                  <td>5000000002913600092</td> 
+                  <td>Display Google</td>
+                  <td>Doubleclick</td>   
+                  <td></td>
+                  <td></td>
+                  <td>ad.doubleclick.net</td>
+                  <td>1</td>
+                  <td>ID</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.min.js"></script>
+    <script src="static/js/jquery.tablesorter.min.js"></script>
+    <script src="static/js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="static/js/codemirror.js"></script>
+    <script src="static/js/sql.js"></script>
+    <script src="static/js/fuse.min.js"></script>
+    <script src="static/js/redsift.js"></script>
+  </body>
+</html>
