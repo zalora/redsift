@@ -8,8 +8,10 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 import Database.PostgreSQL.Simple hiding (query)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import qualified Data.String.Utils as StringUtils
+import Data.Char (toLower)
 
-host = "redcat.ds.zalora.com"
+host = "redcat.zalora.com"
 port = 5439
 user = "dsteam"
 db = "redcat"
@@ -28,10 +30,10 @@ allTables = (foldl' f Map.empty) `fmap` (flip query_ "SELECT table_schema, table
 --
 -- We have to return Aeson values here since there's no way of
 -- representing Null (especially in homogenous lists) without them.
-query :: String -> PQ.Row -> IO Aeson.Value
+query :: String -> Integer -> IO Aeson.Value
 query q limit = do
   c <- PQ.connectdb $ BU.fromString $ "host=" ++ host ++ " port=" ++ show port ++ " dbname=" ++ db ++ " user=" ++ user
-  r' <- PQ.exec c $ BU.fromString q
+  r' <- PQ.exec c $ BU.fromString $ limitQuery q limit
   case r' of
     Nothing -> (error . BU.toString . fromJust) `fmap` PQ.errorMessage c
     Just r -> do
@@ -44,9 +46,18 @@ query q limit = do
          nTuples <- PQ.ntuples r
          nFields <- PQ.nfields r
          names <- mapM (\x -> fromJust `fmap` PQ.fname r x) [0 .. nFields - 1]
-         rows <- mapM (getRow r nFields) [0 .. (min nTuples limit) - 1]
+         rows <- mapM (getRow r nFields) [0 .. nTuples - 1]
          return $ Aeson.toJSON $ [map (Aeson.String . Text.pack . BU.toString) names] ++ rows
        getRow r nFields rowNum = mapM (\x -> toValue `fmap` PQ.getvalue r rowNum x) [0 .. nFields - 1]
        toValue v = case v of
                      Nothing -> Aeson.Null
                      Just s -> Aeson.String $ Text.pack $ BU.toString s
+
+-- in case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
+limitQuery :: String -> Integer -> String
+limitQuery q limit = let qAsList = words $ StringUtils.replace ";" "" q in
+                     case (map toLower (qAsList !! (length qAsList - 2))) of
+                       "limit" -> case (read (qAsList !! (length qAsList - 1))) > limit of
+                                    True -> unwords $ (init qAsList) ++ [show limit]
+                                    False -> unwords $ qAsList
+                       _ -> unwords $ qAsList ++ ["limit", show limit]
