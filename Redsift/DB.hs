@@ -8,8 +8,9 @@ import qualified Database.PostgreSQL.LibPQ as PQ
 import Database.PostgreSQL.Simple hiding (query)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import qualified Data.String.Utils as StringUtils
+import Data.String.Utils (strip, join)
 import Data.Char (toLower)
+import Data.List.Split (splitOn)
 
 host = "redcat.zalora.com"
 port = 5439
@@ -33,7 +34,7 @@ allTables = (foldl' f Map.empty) `fmap` (flip query_ "SELECT table_schema, table
 query :: String -> Integer -> IO Aeson.Value
 query q limit = do
   c <- PQ.connectdb $ BU.fromString $ "host=" ++ host ++ " port=" ++ show port ++ " dbname=" ++ db ++ " user=" ++ user
-  r' <- PQ.exec c $ BU.fromString $ limitQuery q limit
+  r' <- PQ.exec c $ BU.fromString $ limitQuery limit q
   case r' of
     Nothing -> (error . BU.toString . fromJust) `fmap` PQ.errorMessage c
     Just r -> do
@@ -54,10 +55,16 @@ query q limit = do
                      Just s -> Aeson.String $ Text.pack $ BU.toString s
 
 -- in case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
-limitQuery :: String -> Integer -> String
-limitQuery q limit = let qAsList = words $ StringUtils.replace ";" "" q in
+limitQuery :: Integer -> String -> String
+limitQuery limit q =  join ";" $ map (applyLimit limit) $ splitQuery q
+
+applyLimit :: Integer -> String -> String
+applyLimit limit q = let qAsList = words q in
                      case (map toLower (qAsList !! (length qAsList - 2))) of
                        "limit" -> case (read (qAsList !! (length qAsList - 1))) > limit of
                                     True -> unwords $ (init qAsList) ++ [show limit]
                                     False -> unwords $ qAsList
                        _ -> unwords $ qAsList ++ ["limit", show limit]
+
+splitQuery :: String -> [String]
+splitQuery q = filter (not . null) $ map strip $ splitOn ";" q
