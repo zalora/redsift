@@ -1,173 +1,67 @@
-// Models
-Database = Backbone.Model.extend({});
-Table = Backbone.Model.extend({});
+var redSift = angular.module('myApp', []);
+redSift.service('queryData', function($http, $rootScope) {
+  var baseURL = "/query?q=",
+      tblData = {};
+  return {
+    getTables: function(db, tbl) {
+      var url = baseURL + "SELECT * FROM " + db + "." + tbl + " ORDER BY random() LIMIT 100;";
+      $http.get(url).success(function(data, status, headers, config) {
+        tblData.tblHeaders = data[0]
+        tblData.tblRows = data.slice(1, data.length);
+        tblData.dbName = db;
+        tblData.tblName = tbl;
 
-// Collections
-Databases = Backbone.Collection.extend({
-  model: Database
-});
-
-// Views
-
-var databases;
-
-
-// Functions
-function rebuildScroll() {
-  $("#options").mCustomScrollbar("destroy");
-  $("#options").mCustomScrollbar({
-    theme:"light"
-  }); 
-}
-function refreshTablesList(db_name) {
-  var selDb = databases.findWhere({name:db_name}),
-      selTbls = selDb.get("tables"),
-      fTbls = [];
-  $("#tablesList").empty();
-  _.each(selTbls, function(tbl) {
-    $("#tablesList").append("<li><a>" + tbl.get("name") + "</a></li>");
-    fTbls.push({"table": tbl.get("name")})
-  });
-  rebuildScroll();
-
-  start(fTbls);
-}
-function start(tables) {
-    var $inputSearch = $('#searchTables'),
-    $result = $('#tablesList'),
-    searchTables = true,
-    isCaseSensitive = false,
-    fuse;
-    function search() {
-      var sterm = $inputSearch.val();
-      var r = fuse.search(sterm);
-      if( sterm === "" ) {
-        $result.empty();
-        $.each(tables, function() {
-          $result.append('<li><a href="#">' + this.table + '</a</li>');
-        });
-        // need to rebuild the scroller
-        $("#options").mCustomScrollbar("destroy");
-        $("#options").mCustomScrollbar({
-          theme:"light"
-        }); // seems to remove focus on box?
-      } else {
-        $result.empty();
-        $.each(r, function() {
-          $result.append('<li><a href="#">' + this.table + '</a</li>');
-        });
-      }
-    }
-    function createFuse() {
-      var keys = [];
-      if (searchTables) {
-        keys.push('table');
-      }
-      fuse = new Fuse(tables, {
-        keys: keys,
-        caseSensitive: isCaseSensitive
+        $rootScope.$broadcast('tblDataChanged', tblData);
       });
     }
-    $inputSearch.on('keyup', search);
-    createFuse();
   }
-// Start
-$(document).ready(function() { 
-  // fetch data from API
-  
-  // fetch data from local
-  $.getJSON("tables.json", function(data) {
-    var dbs = []
-    _.each(data, function(db, db_name) {
-      // todo: replace with view
-      $("#databasesList").append("<li><a id='db__" + db_name + "'>" + db_name + "</a></li>");
-      $('#db__' + db_name).click(function() {
-        refreshTablesList($(this).text());
-      });
-
-      var database = new Database({
-        name: db_name,
-        tables: []
-      }),
-          tbls = [];
-      _.each(db, function(tbl) {
-        var table = new Table({
-          name: tbl[0],
-          is_view: tbl[1]
-        });
-        tbls.push(table);
-      });
-      database.set("tables", tbls);
-      dbs.push(database);
-    });
-    databases = new Databases(dbs);
-    rebuildScroll();
-  });
-
-  // initialize various plugins/3rd party
-  $("#data-tbl").tablesorter(); 
-  $("#options").mCustomScrollbar({
-    theme:"light"
-  }); // todo: call destroy and rebuild when tables refreshes
-  $("#query_builder_toggle").click(function() {
-    $("#query_builder").toggle( "fast", function() {
-    // Animation complete.
-    });
-  });
-
-  // codemirror
-  var myCodeMirror = CodeMirror.fromTextArea(document.getElementById('sql_editor'), {
-    lineNumbers: true,
-    value: "-- your query here",
-    mode: "text/x-sql"
-  });
-
-  // fuse: fuzzy search
-  var tables = [{
-    table: 'ampr',
-    database: 'jurassicpark'
-  },{
-    table: 'browser',
-    database: 'jurassicpark'
-  },{
-    table: 'cust_recommendation_vtd',
-    database: 'jurassicpark'
-  },{
-    table: 'cvid',
-    database: 'jurassicpark'
-  },{
-    table: 'devices',
-    database: 'jurassicpark'
-  },{
-    table: 'eepr',
-    database: 'jurassicpark'
-  },{
-    table: 'full_zpr',
-    database: 'jurassicpark'
-  },{
-    table: 'idr_home_bestsellers',
-    database: 'jurassicpark'
-  },{
-    table: 'idr_home_female_bestsellers',
-    database: 'jurassicpark'
-  },{
-    table: 'idr_home_male_bestsellers',
-    database: 'jurassicpark'
-  },{
-    table: 'idr_meta',
-    database: 'jurassicpark'
-  },{
-    table: 'lpr',
-    database: 'jurassicpark'
-  },{
-    table: 'orders_table',
-    database: 'jurassicpark'
-  },{
-    table: 'osr',
-    database: 'jurassicpark'
-  },{
-    table: 'st',
-    database: 'jurassicpark'
-  }];
-  start(tables);
 });
+// controllers
+redSift.controller('MenuController',
+  function($scope, $http, queryData) {
+    $scope.menuState = {}
+    $scope.menuState.show = false;
+    $scope.isLocked = false;
+    $scope.databases = [];
+    $scope.statusMsg = "";
+
+    // fetch tables from API
+    $http.get('/table/list').success(function(data, status, headers, config) {
+      $scope.databases = data;
+    }).error(function(data, status, headers, config) {
+    });
+
+    $scope.toggleMenu = function() {
+      $scope.menuState.show = !$scope.menuState.show;
+    }
+    $scope.lockMenu = function(ops, tblName) {
+      $scope.menuState.show = false;
+      $scope.isLocked = true;
+      $scope.statusMsg = "Please wait, " + ops + " " + tblName + "...";
+    }
+    $scope.unlockMenu = function() {
+      $scope.isLocked = false;
+    }
+    $scope.loadTbl = function(dbName,tblName) {
+      $scope.lockMenu("loading", tblName);
+      queryData.getTables(dbName, tblName);
+    }
+    $scope.$on('tblDataChanged', function(event, tblData) {
+      $scope.isLocked = false;
+    });
+  });
+redSift.controller('QueryController',
+  function($scope) {
+  });
+redSift.controller('DataViewController',
+  function($scope, queryData) {
+    $scope.tblData = {}
+    $scope.tblName = "";
+    $scope.dbName = "";
+
+    $scope.$on('tblDataChanged', function(event, tblData) {
+      $scope.tblData = tblData;
+      $scope.tblName = tblData.tblName;
+      $scope.dbName = tblData.dbName;
+    });
+  });

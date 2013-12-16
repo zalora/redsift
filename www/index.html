@@ -1,341 +1,73 @@
 <!doctype html>
-<html>
+<html ng-app='myApp'>
   <head>
-    <meta charset="utf-8" />
-    <title>RedSift - A web administration tool for Amazon Redshift.</title>
-    <link rel="stylesheet" href="static/css/pure-min.css">
-    <link rel="stylesheet" href="static/css/style.css">
-    <link rel="stylesheet" href="static/css/ionicons.min.css">
-    <link rel="stylesheet" href="static/css/tablesorterstyle.css">
-    <link rel="stylesheet" href="static/css/jquery.mCustomScrollbar.css">
-    <link rel="stylesheet" href="static/css/codemirror.css">
-    <script src="static/js/jquery-1.10.2.min.js"></script>
-    <script src="static/js/underscore-min.js"></script>
-    <script src="static/js/backbone-min.js"></script>
+    <title>Redsift</title>
+    <link rel="stylesheet" href="static/css/foundation.min.css" />
+    <link rel="stylesheet" type="text/css" href="static/css/tree_.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="static/css/redsift.css">
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.1/angular.min.js"></script>
   </head>
-  <body>
-    
-    <div class="pure-g-r" id="layout">
-      <div class="pure-u">
-        <div id="options">
-          <h1 class="rs-heading">
-            <img src="static/graphics/redsift.png"><br>
-            <span style="color:red">RED</span><span style="color:#AAA">SIFT</span>
-          </h1>
-          <p class="faded">EXPLORE</p>
-          <div class="pure-menu pure-menu-open">
-            <a class="pure-menu-heading">Databases</a>
-            <ul id="databasesList">
-            </ul>
-          </div>
-          <div class="pure-menu pure-menu-open">
-            <a class="pure-menu-heading" id="rs-tables">Tables</a>
-            <input type="text" id="searchTables" style="width:135px;">
-            <ul id="tablesList">
-            </ul>
-          </div>
-        </div>
-      </div>
-      <div class="pure-u-1" id="viewer">
-        <div class="content">
-          <p><small class="ion-code">Query builder</small></p>
-          <button class="ion-ios7-arrow-down" id="query_builder_toggle"></button>
-          <div id="query_builder">
-            <form class="pure-form">
-              <textarea id="sql_editor"></textarea>
-              <br>
-              <button id="query_builder_submit" class="pure-button">Query</button>
-            </form>
-          </div>
-          <hr>
-          <small class="ion-ios7-search-strong">Data Inspector</small>
-          <div id="data_inspector">
-            <table class="tablesorter" id="data-tbl">
-              <thead>
-                <tr>  
-                  <th>session_ids</th>
-                  <th>channel</th>
-                  <th>partner</th>
-                  <th>campaign</th>
-                  <th>content_ad_group</th>
-                  <th>advertising_media</th>
-                  <th>visits</th>
-                  <th>country</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>SEO NonBrand</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>300000002913600092</td> 
-                  <td>Referrals</td>
-                  <td></td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>SG</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-                <tr>
-                  <td>5000000002913600092</td> 
-                  <td>Display Google</td>
-                  <td>Doubleclick</td>   
-                  <td></td>
-                  <td></td>
-                  <td>ad.doubleclick.net</td>
-                  <td>1</td>
-                  <td>ID</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+  <body ng-controller='MenuController'>
+    <h1 class="padL20" style="color:#DDD;"><span style="color:#FF4040">red</span>sift</h1>
+    <button ng-class="{button: true, alert: true, tiny: true, disabled: isLocked}"  data-tooltip class="has-tip tip-right" title="Click to access list of tables and views." style="margin-left: 20px;" ng-click='isLocked || toggleMenu()'><span style="font-size: 16px;">&#9776;</span></button>
+    <hr />
+
+    <div id="menu" ng-show='menuState.show'>
+      <h3 style="color:#AAA;border-bottom: 1px dashed #CCC"><span data-tooltip class="has-tip tip-right" title="Show tables from a database by clicking on them. Clicking on a table/view will load sample data.">select data</span></h3>
+      <ol class="tree">
+        <li ng-repeat='(db_name, tables) in databases'>
+          <label for="{{ db_name }}" class="database">{{ db_name }}</label> <input type="checkbox" id="{{ db_name }}" />
+          <ol>
+            <li ng-repeat='table in tables' ng-class='{file: true, is_tbl: !(table[1]), is_view: table[1]}'><a ng-click="loadTbl(db_name,table[0])">{{ table[0] }}</a></li>
+          </ol>
+        </li>
+      </ol>
     </div>
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.min.js"></script>
-    <script src="static/js/jquery.tablesorter.min.js"></script>
-    <script src="static/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="static/js/codemirror.js"></script>
-    <script src="static/js/sql.js"></script>
-    <script src="static/js/fuse.min.js"></script>
-    <script src="static/js/redsift.js"></script>
+    <section class="main marL20">
+      <div class="row">
+        <div class="panel" ng-show="isLocked">
+          {{ statusMsg }}
+        </div>
+      </div>
+      <div>
+        <h2><span data-tooltip class="has-tip tip-right" title="Write a full SQL statement to be queried on the server.">query.</span></h2>
+        <div class="large-12 columns">
+          <form>
+            <div class="large-12 columns">
+              <input type="text" id="right-label" placeholder="Your SQL query here.">
+            </div>
+            <button class="button small alert">Q.</button>
+          </form>
+        </div>
+      </div>
+      <hr>
+      <div ng-controller='DataViewController'>
+        <h2><span data-tooltip class="has-tip tip-right" title="Results from your query or random entries from the table you loaded via the menu.">data.</span></h2>
+        <ul class="breadcrumbs">
+          <li>redcat</li>
+          <li>{{ dbName }}</li>
+          <li class="current">{{ tblName }}</li>
+        </ul>
+        <table>
+          <thead>
+            <tr>
+              <th ng-repeat='header in tblData.tblHeaders'>{{ header }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-repeat='row in tblData.tblRows'>
+              <td ng-repeat='field in row track by $index'>{{ field }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <footer class="padL20">
+      <hr />
+      <p><strong>redsift</strong>, a simple web tool for Amazon Redshift. Contact Chris Jekor &amp; Kenny Shen if you have any questions.</p>
+    </footer>
+    <script type="text/javascript" src="static/js/foundation.min.js"></script>
+    <script type="text/javascript" src="static/js/redsift.js"></script>
   </body>
 </html>
