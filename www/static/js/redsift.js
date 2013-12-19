@@ -12,6 +12,9 @@ redSift.service('queryData', function($http, $rootScope) {
         tblData.tblName = tbl;
 
         $rootScope.$broadcast('tblDataChanged', tblData);
+      }).error(function(data, status, headers, config) {
+        alert("Error: could not process request - server returned " + status);
+        $rootScope.$broadcast('queryDataServerError');
       });
     }
   }
@@ -35,6 +38,7 @@ redSift.controller('MenuController',
       $scope.menuState.show = !$scope.menuState.show;
     }
     $scope.lockMenu = function(ops, tblName) {
+      $('html, body').animate({ scrollTop: 0 }, 'fast');
       $scope.menuState.show = false;
       $scope.isLocked = true;
       $scope.statusMsg = "Please wait, " + ops + " " + tblName + "...";
@@ -49,12 +53,15 @@ redSift.controller('MenuController',
     $scope.$on('tblDataChanged', function(event, tblData) {
       $scope.isLocked = false;
     });
+    $scope.$on('queryDataServerError', function(event) {
+      $scope.isLocked = false;
+    });
   });
 redSift.controller('QueryController',
   function($scope) {
   });
 redSift.controller('DataViewController',
-  function($scope, queryData) {
+  function($scope, $timeout, queryData) {
     $scope.tblData = {}
     $scope.tblName = "";
     $scope.dbName = "";
@@ -63,5 +70,33 @@ redSift.controller('DataViewController',
       $scope.tblData = tblData;
       $scope.tblName = tblData.tblName;
       $scope.dbName = tblData.dbName;
+      $timeout(function () { shortHandTableHeaders('dvtbl', 10)}, 1000);
     });
   });
+
+// helper functions
+function shortHandTableHeaders(tableID, limit) {
+  // shorten table header names (reveal on hover)
+  function shortHandHeaderTxt(txt, limit) {
+    return txt.substring(0, limit - 3) + "...";
+  }
+  var ths = $('#' + tableID + ' thead tr th');
+  var content;
+  ths.each (function () {
+      var $this = $(this);
+      content = $this.text();
+      if (content.length > limit) {
+         $this.data('longheader', content);
+         $this.text (shortHandHeaderTxt(content, limit));
+
+         $this.hover (
+             function() {
+                 $(this).text($this.data('longheader'));
+             },
+             function () {
+                 $(this).text(shortHandHeaderTxt($this.data('longheader'), limit));
+             }
+         );
+       }
+  });
+}
