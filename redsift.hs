@@ -5,7 +5,10 @@ import Data.Aeson (ToJSON(..))
 import Redsift.CGI
 import Redsift.DB
 
-main = spawnSCGI "127.0.0.1" "9000" dispatch
+main = do
+    let port = "9000"
+    putStrLn ("attempting to listen on port " ++ port)
+    spawnSCGI "127.0.0.1" port dispatch
 
 dispatch "GET" ["table", "list"] = toResponse (toJSON `fmap` allTables)
 dispatch "GET" ["query"] = do
