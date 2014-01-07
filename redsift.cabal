@@ -24,20 +24,19 @@ data-files:
 executable redsift
   main-is:             redsift.hs
   build-depends:       aeson,
+                       MissingH,
                        base >=4.6 && <4.7,
                        bytestring,
-                       cgi,
                        containers,
-                       filepath,
-                       MissingH,
-                       mtl,
-                       network,
+                       http-types >= 0.8,
                        postgresql-libpq,
                        postgresql-simple,
                        split,
-                       sscgi >= 0.3,
+                       string-conversions,
                        text,
-                       utf8-string
+                       utf8-string,
+                       wai >= 2.0,
+                       wai-handler-fastcgi >= 2.0
   default-language:    Haskell2010
   other-extensions:    FlexibleInstances, OverloadedStrings
   ghc-options:         -Wall -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-unused-do-bind -threaded -O2
