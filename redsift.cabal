@@ -10,6 +10,17 @@ category:            Database
 build-type:          Simple
 cabal-version:       >=1.10
 
+data-files:
+    www/static/images/rs_view.png
+    www/static/images/rs_tbl.png
+    www/static/images/rs_db.png
+    www/static/js/redsift.js
+    www/static/js/foundation.min.js
+    www/static/css/tree_menu.css
+    www/static/css/redsift.css
+    www/static/css/foundation.min.css
+    www/index.html
+
 executable redsift
   main-is:             redsift.hs
   build-depends:       aeson,
