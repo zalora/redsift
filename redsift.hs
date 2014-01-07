@@ -2,20 +2,24 @@
 module Main where
 
 import Data.Aeson (ToJSON(..), encode)
-import Data.ByteString
+import Data.ByteString (ByteString)
 import Data.String.Conversions
 import Data.Text
 import Network.HTTP.Types
 import Network.Wai
-import Network.Wai.Handler.FastCGI
+import Network.Wai.Handler.Warp
+import System.IO
 
 import Redsift.DB
 
 main :: IO ()
-main = run redsiftApp
+main = do
+    let port = 9000
+    hPutStrLn stderr ("attempting to listen on port " ++ show port)
+    run port redsiftApp
 
 redsiftApp :: Application
-redsiftApp request = do
+redsiftApp request =
     dispatch (requestMethod request) (pathInfo request) (queryString request)
 
 dispatch :: Method -> [Text] -> Query -> IO Response
