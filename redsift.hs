@@ -1,3 +1,4 @@
+{-# language OverloadedStrings #-}
 module Main where
 
 import Data.Aeson (ToJSON(..))

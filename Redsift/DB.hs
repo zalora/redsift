@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Redsift.DB (allTables, query) where
 
 import qualified Data.Aeson as Aeson

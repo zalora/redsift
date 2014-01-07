@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, OverloadedStrings #-}
 
 -- This is a bunch of code that I haven't put into the sscgi library
 -- because I'm not satisfied with the interface yet.
