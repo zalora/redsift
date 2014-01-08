@@ -1,6 +1,6 @@
 var redSift = angular.module('myApp', []);
 redSift.service('queryData', function($http, $rootScope) {
-  var baseURL = "/query?q=",
+  var baseURL = "api/query?q=",
       tblData = {};
   return {
     getTables: function(db, tbl) {
@@ -29,7 +29,7 @@ redSift.controller('MenuController',
     $scope.statusMsg = "";
 
     // fetch tables from API
-    $http.get('/table/list').success(function(data, status, headers, config) {
+    $http.get('api/table/list').success(function(data, status, headers, config) {
       $scope.databases = data;
     }).error(function(data, status, headers, config) {
     });
