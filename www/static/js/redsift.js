@@ -16,6 +16,20 @@ redSift.service('queryData', function($http, $rootScope) {
         alert("Error: could not process request - server returned " + status);
         $rootScope.$broadcast('queryDataServerError');
       });
+    },
+    getQuery: function(query) {
+      var url = baseURL + query;
+      $http.get(url).success(function(data, status, headers, config) {
+        tblData.tblHeaders = data[0]
+        tblData.tblRows = data.slice(1, data.length);
+        //tblData.dbName = db;
+        //tblData.tblName = tbl;
+
+        $rootScope.$broadcast('tblDataChanged', tblData);
+      }).error(function(data, status, headers, config) {
+        alert("Error: could not process request - server returned " + status);
+        $rootScope.$broadcast('queryDataServerError');
+      });
     }
   }
 });
@@ -27,6 +41,12 @@ redSift.controller('MenuController',
     $scope.isLocked = false;
     $scope.databases = [];
     $scope.statusMsg = "";
+    $scope.user_query = ""
+
+    $scope.runQuery = function() {
+      $scope.lockMenu("loading", "your query");
+      queryData.getQuery($scope.user_query);
+    };
 
     // fetch tables from API
     $http.get('api/table/list').success(function(data, status, headers, config) {
@@ -56,9 +76,6 @@ redSift.controller('MenuController',
     $scope.$on('queryDataServerError', function(event) {
       $scope.isLocked = false;
     });
-  });
-redSift.controller('QueryController',
-  function($scope) {
   });
 redSift.controller('DataViewController',
   function($scope, $timeout, queryData) {
