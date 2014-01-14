@@ -15,7 +15,7 @@ import Data.List.Split (splitOn)
 
 host = "redcat.zalora.com"
 port = 5439
-user = "dsteam"
+user = "zlall"
 db = "redcat"
 
 connect' = connect defaultConnectInfo {connectHost = host, connectPort = port, connectUser = user, connectDatabase = db}
