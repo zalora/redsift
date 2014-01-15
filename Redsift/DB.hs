@@ -16,6 +16,8 @@ port = 5439
 user = "zlall"
 db = "redcat"
 
+connect' = connect defaultConnectInfo {connectHost = host, connectPort = port, connectUser = user, connectDatabase = db}
+
 allTables :: IO (Map.Map String [(String, Bool)])
 allTables = (foldl' f Map.empty) `fmap` (flip query_ "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables" =<< connect')
  where f tuples (schema, name, type') = Map.insertWith (++) schema [(name, type')] tuples
