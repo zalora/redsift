@@ -13,7 +13,7 @@ redSift.service('queryData', function($http, $rootScope) {
 
         $rootScope.$broadcast('tblDataChanged', tblData);
       }).error(function(data, status, headers, config) {
-        alert("Error: could not process request - server returned " + status);
+        alert("Error: could not process request - server returned " + status + ":" + data);
         $rootScope.$broadcast('queryDataServerError');
       });
     },
@@ -27,7 +27,7 @@ redSift.service('queryData', function($http, $rootScope) {
 
         $rootScope.$broadcast('tblDataChanged', tblData);
       }).error(function(data, status, headers, config) {
-        alert("Error: could not process request - server returned " + status);
+        alert("Error: could not process request - server returned " + status + ":" + data);
         $rootScope.$broadcast('queryDataServerError');
       });
     }
