@@ -3,13 +3,15 @@ module Redsift.DB (allTables, query) where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.UTF8 as BU
-import Data.List (foldl')
+import Data.List (foldl', elemIndices)
 import Data.Maybe (fromJust)
 import qualified Database.PostgreSQL.LibPQ as PQ
 import Database.PostgreSQL.Simple hiding (query)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Char (toLower)
+
+import Redsift.Exception
 
 host = "redcat.zalora.com"
 port = 5439
@@ -36,15 +38,22 @@ query q limit = do
       c <- PQ.connectdb $ BU.fromString $ "host=" ++ host ++ " port=" ++ show port ++ " dbname=" ++ db ++ " user=" ++ user
       r' <- PQ.exec c $ BU.fromString $ limitQuery limit q
       case r' of
-        Nothing -> (error . BU.toString . fromJust) `fmap` PQ.errorMessage c
+        Nothing -> do
+          err <- (BU.toString . fromJust) `fmap` PQ.errorMessage c
+          throwUserException err
         Just r -> do
           status <- PQ.resultStatus r
           case status of
             PQ.CommandOk -> return Aeson.Null -- shouldn't happen because web users shouldn't have write access
             PQ.TuplesOk -> tuples r
-            _ -> (error . BU.toString . fromJust) `fmap` PQ.resultErrorMessage r
-  else error "Multiple queries is not allowed."
-  where isSingleQuery q0 = length (filter (== ';') q0) < 2
+            _ -> do
+              err <- (BU.toString . fromJust) `fmap` PQ.resultErrorMessage r
+              throwUserException err
+  else throwUserException "Multiple queries is not allowed."
+  where isSingleQuery q
+          | length (filter (== ';') q) == 0 = True           -- No semicolons
+          | head (elemIndices ';' q) == length q - 1 = True -- Make sure nothing is behind the first semicolon
+          | otherwise = False
         tuples r = do
           nTuples <- PQ.ntuples r
           nFields <- PQ.nfields r
@@ -56,7 +65,7 @@ query q limit = do
                       Nothing -> Aeson.Null
                       Just s -> Aeson.String $ Text.pack $ BU.toString s
 
--- in case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
+-- In case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
 -- For this method, query q is assumed to have AT MOST one semicolon,
 -- otherwise it would result in error in the query function
 limitQuery :: Integer -> String -> String

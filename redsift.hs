@@ -1,4 +1,4 @@
-{-# language OverloadedStrings, DeriveDataTypeable #-}
+{-# language OverloadedStrings #-}
 module Main where
 
 import Control.Applicative ((<$>), (<|>))
@@ -7,7 +7,6 @@ import Data.Aeson (ToJSON(..), encode)
 import Data.ByteString (ByteString)
 import Data.String.Conversions
 import Data.Text
-import Data.Typeable
 import Filesystem.Path.CurrentOS (decodeString)
 import Network.HTTP.Types
 import Network.Wai
@@ -20,6 +19,7 @@ import System.IO
 import Paths_redsift
 
 import Redsift.DB
+import Redsift.Exception
 
 main :: IO ()
 main = do
@@ -66,13 +66,6 @@ queryVarRequired query key cont = case lookup key query of
 
 -- * exception handling (and throwing)
 
-data UserException = UserException String
-  deriving (Typeable, Show)
-
-instance Exception UserException
-
-throwUserException :: String -> IO a
-throwUserException = throwIO . UserException
 
 errorHandler :: UserException -> IO Response
 errorHandler (UserException reason) = do
