@@ -38,9 +38,9 @@ Using GHC of version at least 7.4 is recommended. Also, using cabal-dev to build
 Then do the following:
 
     git clone <this repository>
-    cabal-dev install --only-dependencies
+    cabal install
 
 ## Run
 
-    $ lighttpd -D -f /home/location/to/lighttpd.conf
+    $ sudo lighttpd -D -f /home/location/to/lighttpd.conf
     $ redsift
