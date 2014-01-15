@@ -18,7 +18,7 @@ redSift.service('queryData', function($http, $rootScope) {
       });
     },
     getQuery: function(query) {
-      var url = baseURL + query;
+      var url = baseURL + escape(query);
       $http.get(url).success(function(data, status, headers, config) {
         tblData.tblHeaders = data[0]
         tblData.tblRows = data.slice(1, data.length);
