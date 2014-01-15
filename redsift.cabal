@@ -43,4 +43,4 @@ executable redsift
                        warp >= 2.0
   default-language:    Haskell2010
   other-extensions:    FlexibleInstances, OverloadedStrings
-  ghc-options:         -Wall -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-unused-do-bind -threaded -O2
+  ghc-options:         -Wall -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-unused-do-bind -fno-warn-name-shadowing -threaded -O2
