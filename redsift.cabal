@@ -36,6 +36,7 @@ executable redsift
                        string-conversions,
                        system-filepath,
                        text,
+                       time,
                        utf8-string,
                        wai >= 2.0,
                        wai-app-static,

@@ -56,6 +56,11 @@ apiHandler "GET" ["query"] queryString =
     queryVarRequired queryString "q" $ \ q -> do
         result <- query (cs q) 100
         return $ responseLBS ok200 [] (encode (toJSON result))
+apiHandler "GET" ["export"] queryString =
+    queryVarRequired queryString "e" $ \ e -> do
+        queryVarRequired queryString "n" $ \ n -> do
+            result <- export "dat.le@zalora.com" (cs n) (cs e) -- TODO: read email from request handler
+            return $ responseLBS ok200 [] (encode (toJSON result))
 apiHandler _ _ _ = return $ responseLBS notFound404 [] "404 not found"
 
 queryVarRequired :: Query -> ByteString -> (ByteString -> IO Response) -> IO Response

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Redsift.DB (allTables, query) where
+module Redsift.DB (allTables, query, export) where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.UTF8 as BU
@@ -10,13 +10,17 @@ import Database.PostgreSQL.Simple hiding (query)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Char (toLower)
-
+import Data.Time (getCurrentTime)
+import Control.Concurrent (forkIO)
 import Redsift.Exception
 
 host = "redcat.zalora.com"
 port = 5439
 user = "zlall"
 db = "redcat"
+-- for exporting
+s3Bucket = "s3://zalora-redsift-oregon"
+maxLimit = 2147483647
 
 connect' = connect defaultConnectInfo {connectHost = host, connectPort = port, connectUser = user, connectDatabase = db}
 
@@ -64,6 +68,30 @@ query q limit = do
         toValue v = case v of
                       Nothing -> Aeson.Null
                       Just s -> Aeson.String $ Text.pack $ BU.toString s
+
+export :: String -> String -> String -> IO Aeson.Value
+export email name q = do
+  s3 <- createS3Url email name
+  c <- PQ.connectdb $ BU.fromString $ "host=" ++ host ++ " port=" ++ show port ++ " dbname=" ++ db ++ " user=" ++ user
+  forkIO $ do
+    r' <- PQ.exec c $ BU.fromString $ unloadQuery q s3
+    putStrLn $ unloadQuery q s3
+    case r' of
+      Nothing -> (error . BU.toString . fromJust) `fmap` PQ.errorMessage c
+      Just r -> putStrLn $ "IT WORKS!" ++ (show r) -- TODO: process the URL
+  return "Your export request has been sent."
+  where createS3Url email name = do
+          now <- fmap show getCurrentTime
+          return $ s3Bucket ++ "/" ++ email ++ "/" ++ name ++ now
+
+-- Wrap normal query with UNLOAD statement and maxLimit so that the result will be just one file on S3
+-- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
+unloadQuery :: String -> String -> String
+unloadQuery q s3 = "UNLOAD ('SELECT * FROM ("
+  ++ limitQuery maxLimit q
+  ++ " )') to '"
+  ++ s3
+  ++ "' credentials 'aws_access_key_id=ACCESSKEY;aws_secret_access_key=SECRETKEY' ALLOWOVERWRITE gzip;" -- TODO: read from config file
 
 -- In case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
 -- For this method, query q is assumed to have AT MOST one semicolon,
