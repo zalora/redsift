@@ -2,7 +2,6 @@
 module Main where
 
 import Control.Applicative ((<$>), (<|>))
-import Control.Exception
 import Data.Aeson (ToJSON(..), encode)
 import Data.ByteString (ByteString)
 import Data.String.Conversions
@@ -67,20 +66,3 @@ queryVarRequired :: Query -> ByteString -> (ByteString -> IO Response) -> IO Res
 queryVarRequired query key cont = case lookup key query of
     Just (Just value) -> cont value
     _ -> return $ responseLBS badRequest400 [] ("missing query var: " <> cs key)
-
-
--- * exception handling (and throwing)
-
-
-errorHandler :: UserException -> IO Response
-errorHandler (UserException reason) = do
-    let msg = "server error: " ++ reason
-    hPutStrLn stderr msg
-    return $ responseLBS internalServerError500 [] (cs msg)
-
--- | Wraps the request handling of the given application
--- to handle raised exceptions through the given error handler.
-handleApp :: Exception e =>
-    (e -> IO Response) -> Application -> Application
-handleApp errorHandler app request =
-    handle errorHandler (app request)
