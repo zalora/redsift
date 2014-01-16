@@ -5,7 +5,6 @@ import Control.Applicative ((<$>), (<|>))
 import Data.Aeson (ToJSON(..), encode)
 import Data.ByteString (ByteString)
 import Data.String.Conversions
-import Data.Text
 import Filesystem.Path.CurrentOS (decodeString)
 import Network.HTTP.Types
 import Network.Wai
@@ -20,9 +19,11 @@ import Paths_redsift
 import Redsift.DB
 import Redsift.Exception
 
+port = 9000
+rowLimit = 100
+
 main :: IO ()
 main = do
-    let port = 9000
     hPutStrLn stderr ("attempting to listen on port " ++ show port)
     documentRoot <- (</> "www") <$> getDataDir
     run port $ handleApp errorHandler $
@@ -43,24 +44,26 @@ fileServerApp documentRoot =
 
 
 -- * api
-
-apiApp :: Application
-apiApp request = apiHandler (requestMethod request) (pathInfo request) (queryString request)
-
-apiHandler :: Method -> [Text] -> Query -> IO Response
-apiHandler "GET" ["table", "list"] _ = do
-    tables <- allTables
-    return $ responseLBS ok200 [] (encode (toJSON tables))
-apiHandler "GET" ["query"] queryString =
-    queryVarRequired queryString "q" $ \ q -> do
-        result <- query (cs q) 100
-        return $ responseLBS ok200 [] (encode (toJSON result))
-apiHandler "GET" ["export"] queryString =
-    queryVarRequired queryString "e" $ \ e -> do
-        queryVarRequired queryString "n" $ \ n -> do
-            result <- export "dat.le@zalora.com" (cs n) (cs e) -- TODO: read email from request handler
-            return $ responseLBS ok200 [] (encode (toJSON result))
-apiHandler _ _ _ = return $ responseLBS notFound404 [] "404 not found"
+apiApp :: Request -> IO Response
+apiApp request =
+    case requestMethod request of
+        "GET" -> case pathInfo request of
+            ["table", "list"] -> do
+                tables <- allTables
+                return $ responseLBS ok200 [] (encode (toJSON tables))
+            ["query"] -> do
+                queryVarRequired (queryString request) "q" $ \ q -> do
+                    result <- query (cs q) rowLimit
+                    return $ responseLBS ok200 [] (encode (toJSON result))
+            ["export"] -> do
+                queryVarRequired (queryString request) "e" $ \ e -> do
+                    queryVarRequired (queryString request) "n" $ \ n -> do
+                        result <- export (getEmail request) (cs n) (cs e)
+                        return $ responseLBS ok200 [] (encode (toJSON result))
+            _ -> return notFoundError
+        _ -> return notFoundError
+    where getEmail request = cs $ snd $ head $ filter (\header -> fst header == "From") (requestHeaders request)
+          notFoundError = responseLBS notFound404 [] "404 not found"
 
 queryVarRequired :: Query -> ByteString -> (ByteString -> IO Response) -> IO Response
 queryVarRequired query key cont = case lookup key query of
