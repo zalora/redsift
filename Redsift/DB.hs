@@ -18,9 +18,6 @@ host = "redcat.zalora.com"
 port = 5439
 user = "zlall"
 db = "redcat"
--- for exporting
-s3Bucket = "s3://zalora-redsift-oregon"
-maxLimit = 2147483647
 
 connect' = connect defaultConnectInfo {connectHost = host, connectPort = port, connectUser = user, connectDatabase = db}
 
@@ -36,7 +33,7 @@ allTables = (foldl' f Map.empty) `fmap` (flip query_ "SELECT table_schema, table
 --
 -- We have to return Aeson values here since there's no way of
 -- representing Null (especially in homogenous lists) without them.
-query :: String -> Integer -> IO Aeson.Value
+query :: String -> Int -> IO Aeson.Value
 query q limit = do
   if (isSingleQuery q) then do
       c <- PQ.connectdb $ BU.fromString $ "host=" ++ host ++ " port=" ++ show port ++ " dbname=" ++ db ++ " user=" ++ user
@@ -69,34 +66,37 @@ query q limit = do
                       Nothing -> Aeson.Null
                       Just s -> Aeson.String $ Text.pack $ BU.toString s
 
-export :: String -> String -> String -> IO Aeson.Value
-export email name q = do
-  s3 <- createS3Url email name
+export :: String -> String -> String -> String -> String -> String -> IO Aeson.Value
+export email name q bucket access secret = do
+  s3 <- createS3Url bucket email name
   c <- PQ.connectdb $ BU.fromString $ "host=" ++ host ++ " port=" ++ show port ++ " dbname=" ++ db ++ " user=" ++ user
   forkIO $ do
-    r' <- PQ.exec c $ BU.fromString $ unloadQuery q s3
-    putStrLn $ unloadQuery q s3
+    r' <- PQ.exec c $ BU.fromString $ unloadQuery q s3 access secret
     case r' of
       Nothing -> (error . BU.toString . fromJust) `fmap` PQ.errorMessage c
       Just r -> putStrLn $ "IT WORKS!" ++ (show r) -- TODO: process the URL
   return "Your export request has been sent."
-  where createS3Url email name = do
+  where createS3Url bucket email name = do
           now <- fmap show getCurrentTime
-          return $ s3Bucket ++ "/" ++ email ++ "/" ++ name ++ now
+          return $ bucket ++ "/" ++ email ++ "/" ++ name ++ now
 
--- Wrap normal query with UNLOAD statement and maxLimit so that the result will be just one file on S3
+-- Wrap normal query with UNLOAD statement and 2147483647 as MaxLimit so that the result will be just one file on S3
 -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
-unloadQuery :: String -> String -> String
-unloadQuery q s3 = "UNLOAD ('SELECT * FROM ("
-  ++ limitQuery maxLimit q
+unloadQuery :: String -> String -> String -> String -> String
+unloadQuery q s3 access secret = "UNLOAD ('SELECT * FROM ("
+  ++ limitQuery 2147483647 q
   ++ " )') to '"
   ++ s3
-  ++ "' credentials 'aws_access_key_id=ACCESSKEY;aws_secret_access_key=SECRETKEY' ALLOWOVERWRITE gzip;" -- TODO: read from config file
+  ++ "' credentials 'aws_access_key_id="
+  ++ access
+  ++ ";aws_secret_access_key="
+  ++ secret
+  ++ "' ALLOWOVERWRITE gzip;" -- TODO: read from config file
 
 -- In case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
 -- For this method, query q is assumed to have AT MOST one semicolon,
 -- otherwise it would result in error in the query function
-limitQuery :: Integer -> String -> String
+limitQuery :: Int -> String -> String
 limitQuery limit q = let qAsList = words $ filter (/=';') q in
                      case (map toLower (qAsList !! (length qAsList - 2))) of
                        "limit" -> case (read (qAsList !! (length qAsList - 1))) > limit of

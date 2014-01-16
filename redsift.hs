@@ -18,34 +18,33 @@ import Paths_redsift
 
 import Redsift.DB
 import Redsift.Exception
-
-port = 9000
-rowLimit = 100
+import Redsift.Config
 
 main :: IO ()
 main = do
+    redsiftConfig <- readRedsiftConfig
+    let port = appPort redsiftConfig
     hPutStrLn stderr ("attempting to listen on port " ++ show port)
     documentRoot <- (</> "www") <$> getDataDir
     run port $ handleApp errorHandler $
-        mapUrls (redsiftApp documentRoot)
+        mapUrls (redsiftApp redsiftConfig documentRoot)
 
 -- | Routing between static files and the API
-redsiftApp :: FilePath -> UrlMap
-redsiftApp documentRoot =
-    mount "api" apiApp <|>
+redsiftApp :: RedsiftConfig -> FilePath -> UrlMap
+redsiftApp redsiftConfig documentRoot =
+    mount "api" (apiApp redsiftConfig) <|>
     mountRoot (fileServerApp documentRoot)
 
 
 -- * file serving
-
 fileServerApp :: FilePath -> Application
 fileServerApp documentRoot =
     staticApp (defaultFileServerSettings (decodeString (documentRoot ++ "/")))
 
 
 -- * api
-apiApp :: Request -> IO Response
-apiApp request =
+apiApp :: RedsiftConfig -> Application
+apiApp redsiftConfig request =
     case requestMethod request of
         "GET" -> case pathInfo request of
             ["table", "list"] -> do
@@ -53,12 +52,12 @@ apiApp request =
                 return $ responseLBS ok200 [] (encode (toJSON tables))
             ["query"] -> do
                 queryVarRequired (queryString request) "q" $ \ q -> do
-                    result <- query (cs q) rowLimit
+                    result <- query (cs q) (rowLimit redsiftConfig)
                     return $ responseLBS ok200 [] (encode (toJSON result))
             ["export"] -> do
                 queryVarRequired (queryString request) "e" $ \ e -> do
                     queryVarRequired (queryString request) "n" $ \ n -> do
-                        result <- export (getEmail request) (cs n) (cs e)
+                        result <- export (getEmail request) (cs n) (cs e) (s3Access redsiftConfig) (s3Bucket redsiftConfig) (s3Secret redsiftConfig)
                         return $ responseLBS ok200 [] (encode (toJSON result))
             _ -> return notFoundError
         _ -> return notFoundError
