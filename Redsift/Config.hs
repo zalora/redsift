@@ -10,7 +10,7 @@ data RedsiftConfig = RedsiftConfig {
     rowLimit :: Int,
     dbHost :: String,
     dbPort :: Int,
-    bUser :: String,
+    dbUser :: String,
     dbName :: String,
     s3Access :: String,
     s3Secret :: String,

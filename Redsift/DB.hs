@@ -7,6 +7,7 @@ import Data.List (foldl', elemIndices)
 import Data.Maybe (fromJust)
 import qualified Database.PostgreSQL.LibPQ as PQ
 import Database.PostgreSQL.Simple hiding (query)
+import Database.PostgreSQL.Simple.Internal (withConnection)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Char (toLower)
@@ -14,15 +15,8 @@ import Data.Time (getCurrentTime)
 import Control.Concurrent (forkIO)
 import Redsift.Exception
 
-host = "redcat.zalora.com"
-port = 5439
-user = "zlall"
-db = "redcat"
-
-connect' = connect defaultConnectInfo {connectHost = host, connectPort = port, connectUser = user, connectDatabase = db}
-
-allTables :: IO (Map.Map String [(String, Bool)])
-allTables = (foldl' f Map.empty) `fmap` (flip query_ "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables" =<< connect')
+allTables :: Connection -> IO (Map.Map String [(String, Bool)])
+allTables db = (foldl' f Map.empty) `fmap` (query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables")
  where f tuples (schema, name, type') = Map.insertWith (++) schema [(name, type')] tuples
 
 -- As far as I can tell, postgresql-simple doesn't give us access to
@@ -33,14 +27,14 @@ allTables = (foldl' f Map.empty) `fmap` (flip query_ "SELECT table_schema, table
 --
 -- We have to return Aeson values here since there's no way of
 -- representing Null (especially in homogenous lists) without them.
-query :: String -> Int -> IO Aeson.Value
-query q limit = do
+
+query :: Connection -> String -> Int -> IO Aeson.Value
+query db q limit = withConnection db $ \db' -> do
   if (isSingleQuery q) then do
-      c <- PQ.connectdb $ BU.fromString $ "host=" ++ host ++ " port=" ++ show port ++ " dbname=" ++ db ++ " user=" ++ user
-      r' <- PQ.exec c $ BU.fromString $ limitQuery limit q
+      r' <- PQ.exec db' $ BU.fromString $ limitQuery limit q
       case r' of
         Nothing -> do
-          err <- (BU.toString . fromJust) `fmap` PQ.errorMessage c
+          err <- (BU.toString . fromJust) `fmap` PQ.errorMessage db'
           throwUserException err
         Just r -> do
           status <- PQ.resultStatus r
@@ -66,14 +60,13 @@ query q limit = do
                       Nothing -> Aeson.Null
                       Just s -> Aeson.String $ Text.pack $ BU.toString s
 
-export :: String -> String -> String -> String -> String -> String -> IO Aeson.Value
-export email name q bucket access secret = do
+export :: Connection -> String -> String -> String -> String -> String -> String -> IO Aeson.Value
+export db email name q bucket access secret = withConnection db $ \db' -> do
   s3 <- createS3Url bucket email name
-  c <- PQ.connectdb $ BU.fromString $ "host=" ++ host ++ " port=" ++ show port ++ " dbname=" ++ db ++ " user=" ++ user
   forkIO $ do
-    r' <- PQ.exec c $ BU.fromString $ unloadQuery q s3 access secret
+    r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3 access secret
     case r' of
-      Nothing -> (error . BU.toString . fromJust) `fmap` PQ.errorMessage c
+      Nothing -> (error . BU.toString . fromJust) `fmap` PQ.errorMessage db'
       Just r -> putStrLn $ "IT WORKS!" ++ (show r) -- TODO: process the URL
   return "Your export request has been sent."
   where createS3Url bucket email name = do
