@@ -63,7 +63,7 @@ apiApp db redsiftConfig request =
             ["export"] -> do
                 queryVarRequired (queryString request) "e" $ \ e -> do
                     queryVarRequired (queryString request) "n" $ \ n -> do
-                        result <- export db (getEmail request) (cs n) (cs e) (s3Access redsiftConfig) (s3Bucket redsiftConfig) (s3Secret redsiftConfig)
+                        result <- export db (getEmail request) (cs n) (cs e) (s3Bucket redsiftConfig) (s3Access redsiftConfig) (s3Secret redsiftConfig)
                         return $ responseLBS ok200 [] (encode (toJSON result))
             _ -> return notFoundError
         _ -> return notFoundError

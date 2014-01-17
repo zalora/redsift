@@ -4,6 +4,7 @@ dbHost: "redcat.zalora.com"
 dbPort: 5439
 dbUser: "zlall"
 dbName: "redcat"
+s3Bucket: "zalora-redsift-oregon"
 s3Access: "ABASDSAMPLEACESSKEY" 
 s3Secret: "312312YASDASAMPLESECRETKEY"
 

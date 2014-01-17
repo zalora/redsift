@@ -11,9 +11,14 @@ import Database.PostgreSQL.Simple.Internal (withConnection)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Char (toLower)
-import Data.Time (getCurrentTime)
+import Data.Time (getCurrentTime, utctDay, formatTime)
 import Control.Concurrent (forkIO)
+import Network.AWS.S3Bucket
+import Network.AWS.AWSConnection
+import System.Locale
+
 import Redsift.Exception
+import Redsift.SignUrl
 
 allTables :: Connection -> IO (Map.Map String [(String, Bool)])
 allTables db = (foldl' f Map.empty) `fmap` (query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables")
@@ -61,30 +66,40 @@ query db q limit = withConnection db $ \db' -> do
                       Just s -> Aeson.String $ Text.pack $ BU.toString s
 
 export :: Connection -> String -> String -> String -> String -> String -> String -> IO Aeson.Value
-export db email name q bucket access secret = withConnection db $ \db' -> do
-  s3 <- createS3Url bucket email name
-  forkIO $ do
-    r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3 access secret
+export db email name q bucket access secret = do
+  s3Prefix <- createS3Prefix email name
+  forkIO $ withConnection db $ \db' -> do
+    r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3Prefix bucket access secret
     case r' of
-      Nothing -> (error . BU.toString . fromJust) `fmap` PQ.errorMessage db'
-      Just r -> putStrLn $ "IT WORKS!" ++ (show r) -- TODO: process the URL
+      Nothing -> throwUserException =<< ((BU.toString . fromJust) `fmap` PQ.errorMessage db')
+      Just _ -> getS3Url bucket s3Prefix
   return "Your export request has been sent."
-  where createS3Url bucket email name = do
-          now <- fmap show getCurrentTime
-          return $ bucket ++ "/" ++ email ++ "/" ++ name ++ now
+  where createS3Prefix email name = do
+          now <- getCurrentTime
+          date <- fmap (show.utctDay) getCurrentTime
+          return $ email ++ "/" ++ date ++ "/" ++ name ++ (formatTime defaultTimeLocale "%T" now)
+        getS3Url bucket s3Prefix = do
+          listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
+          case listResult of
+            Left err -> throwUserException $ show err
+            Right results -> print $ signUrl (access, secret) bucket (key (head results)) 1999999999
+
+           --of
+           -- Left _ -> putStrLn "No object of this key???"
+           -- Right results ->  print results
 
 -- Wrap normal query with UNLOAD statement and 2147483647 as MaxLimit so that the result will be just one file on S3
 -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
-unloadQuery :: String -> String -> String -> String -> String
-unloadQuery q s3 access secret = "UNLOAD ('SELECT * FROM ("
+unloadQuery :: String -> String -> String -> String -> String -> String
+unloadQuery q s3 bucket access secret = "UNLOAD ('SELECT * FROM ("
   ++ limitQuery 2147483647 q
   ++ " )') to '"
-  ++ s3
+  ++ "s3://" ++ bucket ++ "/" ++ s3
   ++ "' credentials 'aws_access_key_id="
   ++ access
   ++ ";aws_secret_access_key="
   ++ secret
-  ++ "' ALLOWOVERWRITE gzip;" -- TODO: read from config file
+  ++ "' ALLOWOVERWRITE gzip;"
 
 -- In case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
 -- For this method, query q is assumed to have AT MOST one semicolon,

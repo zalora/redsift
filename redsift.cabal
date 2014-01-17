@@ -33,6 +33,7 @@ executable redsift
                        HTTP,
                        http-types >= 0.8,
                        network,
+                       old-locale,
                        postgresql-libpq,
                        postgresql-simple,
                        split,
