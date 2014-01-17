@@ -11,11 +11,12 @@ import Database.PostgreSQL.Simple.Internal (withConnection)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Char (toLower)
-import Data.Time (getCurrentTime, utctDay, formatTime)
+import Data.Time (getCurrentTime, utctDay, formatTime, UTCTime)
 import Control.Concurrent (forkIO)
 import Network.AWS.S3Bucket
 import Network.AWS.AWSConnection
 import System.Locale
+import Control.Applicative
 
 import Redsift.Exception
 import Redsift.SignUrl
@@ -65,28 +66,25 @@ query db q limit = withConnection db $ \db' -> do
                       Nothing -> Aeson.Null
                       Just s -> Aeson.String $ Text.pack $ BU.toString s
 
-export :: Connection -> String -> String -> String -> String -> String -> String -> IO Aeson.Value
-export db email name q bucket access secret = do
+export :: Connection -> String -> String -> String -> String -> String -> String -> Int -> IO Aeson.Value
+export db email name q bucket access secret expiry = do
   s3Prefix <- createS3Prefix email name
   forkIO $ withConnection db $ \db' -> do
     r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3Prefix bucket access secret
     case r' of
       Nothing -> throwUserException =<< ((BU.toString . fromJust) `fmap` PQ.errorMessage db')
       Just _ -> getS3Url bucket s3Prefix
-  return "Your export request has been sent."
+  return $ Aeson.toJSON $ Aeson.String "Your export request has been sent."
   where createS3Prefix email name = do
           now <- getCurrentTime
           date <- fmap (show.utctDay) getCurrentTime
           return $ email ++ "/" ++ date ++ "/" ++ name ++ (formatTime defaultTimeLocale "%T" now)
         getS3Url bucket s3Prefix = do
+          epoch <- (read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime)
           listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
           case listResult of
             Left err -> throwUserException $ show err
-            Right results -> print $ signUrl (access, secret) bucket (key (head results)) 1999999999
-
-           --of
-           -- Left _ -> putStrLn "No object of this key???"
-           -- Right results ->  print results
+            Right results -> print $ signUrl (access, secret) bucket (key (head results)) (epoch + (fromIntegral expiry))
 
 -- Wrap normal query with UNLOAD statement and 2147483647 as MaxLimit so that the result will be just one file on S3
 -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv

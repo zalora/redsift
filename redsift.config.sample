@@ -7,5 +7,4 @@ dbName: "redcat"
 s3Bucket: "zalora-redsift-oregon"
 s3Access: "ABASDSAMPLEACESSKEY" 
 s3Secret: "312312YASDASAMPLESECRETKEY"
-
-
+exportExpiry: 259200
