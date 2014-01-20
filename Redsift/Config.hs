@@ -15,7 +15,9 @@ data RedsiftConfig = RedsiftConfig {
     s3Access :: String,
     s3Secret :: String,
     s3Bucket :: String,
-    exportExpiry :: Int -- in seconds
+    exportExpiry :: Int, -- in seconds
+    emailAccount :: String,
+    emailPassword :: String
   }
     deriving Show
 
@@ -30,7 +32,9 @@ instance FromJSON RedsiftConfig where
         m .: "s3Access" <*>
         m .: "s3Secret" <*>
         m .: "s3Bucket" <*>
-        m .: "exportExpiry"
+        m .: "exportExpiry" <*>
+        m .: "emailAccount" <*>
+        m .: "emailPassword"
     parseJSON x = fail ("not an object: " ++ show x)
 
 -- * config files

@@ -20,6 +20,8 @@ import Control.Applicative
 
 import Redsift.Exception
 import Redsift.SignUrl
+import Redsift.Mail
+import Redsift.Config
 
 allTables :: Connection -> IO (Map.Map String [(String, Bool)])
 allTables db = foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables"
@@ -34,10 +36,12 @@ allTables db = foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_n
 -- We have to return Aeson values here since there's no way of
 -- representing Null (especially in homogenous lists) without them.
 
-query :: Connection -> String -> Int -> IO Aeson.Value
-query db q limit = withConnection db $ \db' ->
+-- * issue general Query
+
+query :: Connection -> String -> RedsiftConfig -> IO Aeson.Value
+query db q redsiftConfig = withConnection db $ \db' ->
   if isSingleQuery q then do
-      r' <- PQ.exec db' $ BU.fromString $ limitQuery limit q
+      r' <- PQ.exec db' $ BU.fromString $ limitQuery (rowLimit redsiftConfig) q
       case r' of
         Nothing -> do
           err <- (BU.toString . fromJust) `fmap` PQ.errorMessage db'
@@ -66,38 +70,56 @@ query db q limit = withConnection db $ \db' ->
                       Nothing -> Aeson.Null
                       Just s -> Aeson.String $ Text.pack $ BU.toString s
 
-export :: Connection -> String -> String -> String -> String -> String -> String -> Int -> IO Aeson.Value
-export db email name q bucket access secret expiry = do
-  s3Prefix <- createS3Prefix email name
+-- * export CSV
+
+export :: Connection -> String -> String -> String -> RedsiftConfig -> IO Aeson.Value
+export db recipient reportName q redsiftConfig = do
   forkIO $ withConnection db $ \db' -> do
-    r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3Prefix bucket access secret
+    s3Prefix <- createS3Prefix recipient reportName
+    r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3Prefix redsiftConfig
     case r' of
       Nothing -> throwUserException =<< ((BU.toString . fromJust) `fmap` PQ.errorMessage db')
-      Just _ -> getS3Url bucket s3Prefix
+      Just _ -> processSuccessExport s3Prefix recipient redsiftConfig
   return $ Aeson.toJSON $ Aeson.String "Your export request has been sent."
-  where createS3Prefix email name = do
-          now <- getCurrentTime
-          date <- fmap (show.utctDay) getCurrentTime
-          return $ email ++ "/" ++ date ++ "/" ++ name ++ formatTime defaultTimeLocale "%T" now
-        getS3Url bucket s3Prefix = do
-          epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
-          listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
-          case listResult of
-            Left err -> throwUserException $ show err
-            Right results -> print $ signUrl (access, secret) bucket (key (head results)) (epoch + fromIntegral expiry)
+
+createS3Prefix :: String -> String -> IO String
+createS3Prefix recipient reportName = do
+  now <- getCurrentTime
+  date <- fmap (show.utctDay) getCurrentTime
+  return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ formatTime defaultTimeLocale "%T" now
+
+processSuccessExport :: String -> String -> RedsiftConfig -> IO ()
+processSuccessExport s3Prefix recipient redsiftConfig =
+  let bucket = s3Bucket redsiftConfig
+      access = s3Access redsiftConfig
+      secret = s3Secret redsiftConfig
+      expiry = exportExpiry redsiftConfig
+      user   = emailAccount redsiftConfig
+      pass   = emailPassword redsiftConfig
+  in do
+    epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
+    listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
+    case listResult of
+      Left err -> throwUserException $ show err
+      Right results ->
+        let url = show $ signUrl (access, secret) bucket (key (head results)) (epoch + fromIntegral expiry)
+        in sendCSVExportMail user pass recipient url
 
 -- Wrap normal query with UNLOAD statement and 2147483647 as MaxLimit so that the result will be just one file on S3
 -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
-unloadQuery :: String -> String -> String -> String -> String -> String
-unloadQuery q s3 bucket access secret = "UNLOAD ('SELECT * FROM ("
+unloadQuery :: String -> String -> RedsiftConfig -> String
+unloadQuery q s3Prefix redsiftConfig = 
+  "UNLOAD ('SELECT * FROM ("
   ++ limitQuery 2147483647 q
   ++ " )') to '"
-  ++ "s3://" ++ bucket ++ "/" ++ s3
+  ++ "s3://" ++ s3Bucket redsiftConfig ++ "/" ++ s3Prefix
   ++ "' credentials 'aws_access_key_id="
-  ++ access
+  ++ s3Access redsiftConfig
   ++ ";aws_secret_access_key="
-  ++ secret
+  ++ s3Secret redsiftConfig
   ++ "' ALLOWOVERWRITE gzip;"
+
+-- * common
 
 -- In case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
 -- For this method, query q is assumed to have AT MOST one semicolon,

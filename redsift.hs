@@ -41,7 +41,6 @@ redsiftApp db redsiftConfig documentRoot =
     mount "api" (apiApp db redsiftConfig) <|>
     mountRoot (fileServerApp documentRoot)
 
-
 -- * file serving
 fileServerApp :: FilePath -> Application
 fileServerApp documentRoot =
@@ -57,11 +56,11 @@ apiApp db redsiftConfig request =
                 tables <- allTables db
                 return $ responseLBS ok200 [] (encode (toJSON tables))
             ["query"] -> queryVarRequired (queryString request) "q" $ \ q -> do
-                result <- query db (cs q) (rowLimit redsiftConfig)
+                result <- query db (cs q) redsiftConfig
                 return $ responseLBS ok200 [] (encode (toJSON result))
             ["export"] -> queryVarRequired (queryString request) "e" $ \ e ->
                 queryVarRequired (queryString request) "n" $ \ n -> do
-                    result <- export db (getEmail request) (cs n) (cs e) (s3Bucket redsiftConfig) (s3Access redsiftConfig) (s3Secret redsiftConfig) (exportExpiry redsiftConfig)
+                    result <- export db (getEmail request) (cs n) (cs e) redsiftConfig
                     return $ responseLBS ok200 [] (encode (toJSON result))
             _ -> return notFoundError
         _ -> return notFoundError

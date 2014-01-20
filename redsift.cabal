@@ -36,6 +36,7 @@ executable redsift
                        old-locale,
                        postgresql-libpq,
                        postgresql-simple,
+                       smtps-gmail >= 1.0.0,
                        split,
                        string-conversions,
                        system-filepath,
