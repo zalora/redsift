@@ -17,14 +17,15 @@ import Network.AWS.S3Bucket
 import Network.AWS.AWSConnection
 import System.Locale
 import Control.Applicative
+import Control.Exception (bracket)
 
 import Redsift.Exception
 import Redsift.SignUrl
 import Redsift.Mail
 import Redsift.Config
 
-allTables :: Connection -> IO (Map.Map String [(String, Bool)])
-allTables db = foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables"
+allTables :: ConnectInfo -> IO (Map.Map String [(String, Bool)])
+allTables connectInfo = withDB connectInfo $ \db -> foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables"
  where f tuples (schema, name, type') = Map.insertWith (++) schema [(name, type')] tuples
 
 -- As far as I can tell, postgresql-simple doesn't give us access to
@@ -38,8 +39,8 @@ allTables db = foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_n
 
 -- * issue general Query
 
-query :: Connection -> String -> RedsiftConfig -> IO Aeson.Value
-query db q redsiftConfig = withConnection db $ \db' ->
+query :: ConnectInfo -> String -> RedsiftConfig -> IO Aeson.Value
+query connectInfo q redsiftConfig = withDB connectInfo $ \db -> withConnection db $ \db' ->
   if isSingleQuery q then do
       r' <- PQ.exec db' $ BU.fromString $ limitQuery (rowLimit redsiftConfig) q
       case r' of
@@ -72,9 +73,9 @@ query db q redsiftConfig = withConnection db $ \db' ->
 
 -- * export CSV
 
-export :: Connection -> String -> String -> String -> RedsiftConfig -> IO Aeson.Value
-export db recipient reportName q redsiftConfig = do
-  forkIO $ withConnection db $ \db' -> do
+export :: ConnectInfo -> String -> String -> String -> RedsiftConfig -> IO Aeson.Value
+export connectInfo recipient reportName q redsiftConfig = do
+  forkIO $ withDB connectInfo $ \db -> withConnection db $ \db' -> do
     s3Prefix <- createS3Prefix recipient reportName
     r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3Prefix redsiftConfig
     case r' of
@@ -86,7 +87,7 @@ createS3Prefix :: String -> String -> IO String
 createS3Prefix recipient reportName = do
   now <- getCurrentTime
   date <- fmap (show.utctDay) getCurrentTime
-  return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ formatTime defaultTimeLocale "%T" now
+  return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ "_" ++ formatTime defaultTimeLocale "%T" now
 
 processSuccessExport :: String -> String -> RedsiftConfig -> IO ()
 processSuccessExport s3Prefix recipient (RedsiftConfig _ _ _ _ _ _ access secret bucket expiry user pass) = do
@@ -125,3 +126,7 @@ limitQuery limit q = let qAsList = words $ filter (/=';') q in
                                   then init qAsList ++ [show limit]
                                   else qAsList
                        _ -> unwords $ qAsList ++ ["limit", show limit]
+
+-- Make sure a connection is closed after we finished with the query.
+withDB :: ConnectInfo -> (Connection -> IO a) -> IO a
+withDB connectInfo = bracket (connect connectInfo) close

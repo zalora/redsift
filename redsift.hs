@@ -14,7 +14,6 @@ import Network.Wai.Application.Static
 import Network.Wai.UrlMap
 import System.FilePath
 import System.IO
-import Control.Exception (bracket)
 
 import Paths_redsift
 
@@ -52,19 +51,16 @@ apiApp :: ConnectInfo -> RedsiftConfig -> Application
 apiApp connectInfo redsiftConfig request =
     case requestMethod request of
         "GET" -> case pathInfo request of
-            ["table", "list"] ->
-                withDB connectInfo $ \ db -> do
-                    tables <- allTables db
-                    return $ responseLBS ok200 [] (encode (toJSON tables))
-            ["query"] -> queryVarRequired (queryString request) "q" $ \ q ->
-                withDB connectInfo $ \ db -> do
-                    result <- query db (cs q) redsiftConfig
-                    return $ responseLBS ok200 [] (encode (toJSON result))
+            ["table", "list"] -> do
+                tables <- allTables connectInfo
+                return $ responseLBS ok200 [] (encode (toJSON tables))
+            ["query"] -> queryVarRequired (queryString request) "q" $ \ q -> do
+                result <- query connectInfo (cs q) redsiftConfig
+                return $ responseLBS ok200 [] (encode (toJSON result))
             ["export"] -> queryVarRequired (queryString request) "e" $ \ e ->
-                withDB connectInfo $ \ db -> do
-                    queryVarRequired (queryString request) "n" $ \ n -> do
-                        result <- export db (getEmail request) (cs n) (cs e) redsiftConfig
-                        return $ responseLBS ok200 [] (encode (toJSON result))
+                queryVarRequired (queryString request) "n" $ \ n -> do
+                    result <- export connectInfo (getEmail request) (cs n) (cs e) redsiftConfig
+                    return $ responseLBS ok200 [] (encode (toJSON result))
             _ -> return notFoundError
         _ -> return notFoundError
     where getEmail request = cs $ snd $ head $ filter (\header -> fst header == "From") (requestHeaders request)
@@ -74,7 +70,3 @@ queryVarRequired :: Query -> ByteString -> (ByteString -> IO Response) -> IO Res
 queryVarRequired query key cont = case lookup key query of
     Just (Just value) -> cont value
     _ -> return $ responseLBS badRequest400 [] ("missing query var: " <> cs key)
-
--- Make sure a connection is closed after we finished with the query.
-withDB :: ConnectInfo -> (Connection -> IO a) -> IO a
-withDB connectInfo = bracket (connect connectInfo) close
