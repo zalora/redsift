@@ -12,4 +12,6 @@ sendCSVExportMail user password recipient url =
         bcc  = []
         subj = "Your Redsift Export"
         body = "Hi Redsift User, \n\n Here's your exported data URL:\n" ++ url ++ "\n\nThanks,\n\n This email was sent on behalf of Zalora DataScience team"
-    in sendGmail stdout from pass to cc bcc subj body
+    in withFile "/dev/null" WriteMode $ \h -> do
+        putStrLn $ "Sending to " ++ recipient ++ ":\n" ++ url
+        sendGmail h from pass to cc bcc subj body

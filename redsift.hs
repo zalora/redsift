@@ -31,7 +31,7 @@ main = do
             connectUser = dbUser redsiftConfig,
             connectDatabase = dbName redsiftConfig}
     documentRoot <- (</> "www") <$> getDataDir
-    hPutStrLn stderr ("attempting to listen on port " ++ show port)
+    hPutStrLn stderr ("Attempting to listen on port " ++ show port)
     run port $ handleApp errorHandler $
         mapUrls (redsiftApp connectInfo redsiftConfig documentRoot)
 
