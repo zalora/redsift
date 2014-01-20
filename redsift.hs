@@ -27,10 +27,10 @@ main = do
     let port = appPort redsiftConfig
     documentRoot <- (</> "www") <$> getDataDir
     db <- connect defaultConnectInfo {
-        connectHost = (dbHost redsiftConfig),
+        connectHost = dbHost redsiftConfig,
         connectPort = fromIntegral (dbPort redsiftConfig),
-        connectUser = (dbUser redsiftConfig),
-        connectDatabase = (dbName redsiftConfig)}
+        connectUser = dbUser redsiftConfig,
+        connectDatabase = dbName redsiftConfig}
     hPutStrLn stderr ("attempting to listen on port " ++ show port)
     run port $ handleApp errorHandler $
         mapUrls (redsiftApp db redsiftConfig documentRoot)
@@ -56,15 +56,13 @@ apiApp db redsiftConfig request =
             ["table", "list"] -> do
                 tables <- allTables db
                 return $ responseLBS ok200 [] (encode (toJSON tables))
-            ["query"] -> do
-                queryVarRequired (queryString request) "q" $ \ q -> do
-                    result <- query db (cs q) (rowLimit redsiftConfig)
+            ["query"] -> queryVarRequired (queryString request) "q" $ \ q -> do
+                result <- query db (cs q) (rowLimit redsiftConfig)
+                return $ responseLBS ok200 [] (encode (toJSON result))
+            ["export"] -> queryVarRequired (queryString request) "e" $ \ e ->
+                queryVarRequired (queryString request) "n" $ \ n -> do
+                    result <- export db (getEmail request) (cs n) (cs e) (s3Bucket redsiftConfig) (s3Access redsiftConfig) (s3Secret redsiftConfig) (exportExpiry redsiftConfig)
                     return $ responseLBS ok200 [] (encode (toJSON result))
-            ["export"] -> do
-                queryVarRequired (queryString request) "e" $ \ e -> do
-                    queryVarRequired (queryString request) "n" $ \ n -> do
-                        result <- export db (getEmail request) (cs n) (cs e) (s3Bucket redsiftConfig) (s3Access redsiftConfig) (s3Secret redsiftConfig) (exportExpiry redsiftConfig)
-                        return $ responseLBS ok200 [] (encode (toJSON result))
             _ -> return notFoundError
         _ -> return notFoundError
     where getEmail request = cs $ snd $ head $ filter (\header -> fst header == "From") (requestHeaders request)

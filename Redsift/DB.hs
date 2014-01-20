@@ -22,7 +22,7 @@ import Redsift.Exception
 import Redsift.SignUrl
 
 allTables :: Connection -> IO (Map.Map String [(String, Bool)])
-allTables db = (foldl' f Map.empty) `fmap` (query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables")
+allTables db = foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables"
  where f tuples (schema, name, type') = Map.insertWith (++) schema [(name, type')] tuples
 
 -- As far as I can tell, postgresql-simple doesn't give us access to
@@ -35,8 +35,8 @@ allTables db = (foldl' f Map.empty) `fmap` (query_ db "SELECT table_schema, tabl
 -- representing Null (especially in homogenous lists) without them.
 
 query :: Connection -> String -> Int -> IO Aeson.Value
-query db q limit = withConnection db $ \db' -> do
-  if (isSingleQuery q) then do
+query db q limit = withConnection db $ \db' ->
+  if isSingleQuery q then do
       r' <- PQ.exec db' $ BU.fromString $ limitQuery limit q
       case r' of
         Nothing -> do
@@ -52,7 +52,7 @@ query db q limit = withConnection db $ \db' -> do
               throwUserException err
   else throwUserException "Multiple queries is not allowed."
   where isSingleQuery q
-          | length (filter (== ';') q) == 0 = True           -- No semicolons
+          |';' `notElem` q = True -- No semicolons
           | head (elemIndices ';' q) == length q - 1 = True -- Make sure nothing is behind the first semicolon
           | otherwise = False
         tuples r = do
@@ -60,7 +60,7 @@ query db q limit = withConnection db $ \db' -> do
           nFields <- PQ.nfields r
           names <- mapM (\x -> fromJust `fmap` PQ.fname r x) [0 .. nFields - 1]
           rows <- mapM (getRow r nFields) [0 .. nTuples - 1]
-          return $ Aeson.toJSON $ [map (Aeson.String . Text.pack . BU.toString) names] ++ rows
+          return $ Aeson.toJSON $ map (Aeson.String . Text.pack . BU.toString) names : rows
         getRow r nFields rowNum = mapM (\x -> toValue `fmap` PQ.getvalue r rowNum x) [0 .. nFields - 1]
         toValue v = case v of
                       Nothing -> Aeson.Null
@@ -78,13 +78,13 @@ export db email name q bucket access secret expiry = do
   where createS3Prefix email name = do
           now <- getCurrentTime
           date <- fmap (show.utctDay) getCurrentTime
-          return $ email ++ "/" ++ date ++ "/" ++ name ++ (formatTime defaultTimeLocale "%T" now)
+          return $ email ++ "/" ++ date ++ "/" ++ name ++ formatTime defaultTimeLocale "%T" now
         getS3Url bucket s3Prefix = do
-          epoch <- (read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime)
+          epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
           listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
           case listResult of
             Left err -> throwUserException $ show err
-            Right results -> print $ signUrl (access, secret) bucket (key (head results)) (epoch + (fromIntegral expiry))
+            Right results -> print $ signUrl (access, secret) bucket (key (head results)) (epoch + fromIntegral expiry)
 
 -- Wrap normal query with UNLOAD statement and 2147483647 as MaxLimit so that the result will be just one file on S3
 -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
@@ -104,8 +104,9 @@ unloadQuery q s3 bucket access secret = "UNLOAD ('SELECT * FROM ("
 -- otherwise it would result in error in the query function
 limitQuery :: Int -> String -> String
 limitQuery limit q = let qAsList = words $ filter (/=';') q in
-                     case (map toLower (qAsList !! (length qAsList - 2))) of
-                       "limit" -> case (read (qAsList !! (length qAsList - 1))) > limit of
-                                    True -> unwords $ (init qAsList) ++ [show limit]
-                                    False -> unwords $ qAsList
+                     case map toLower (qAsList !! (length qAsList - 2)) of
+                       "limit" -> unwords $
+                          if read (qAsList !! (length qAsList - 1)) > limit
+                                  then init qAsList ++ [show limit]
+                                  else qAsList
                        _ -> unwords $ qAsList ++ ["limit", show limit]
