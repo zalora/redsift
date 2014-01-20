@@ -80,7 +80,7 @@ export db recipient reportName q redsiftConfig = do
     case r' of
       Nothing -> throwUserException =<< ((BU.toString . fromJust) `fmap` PQ.errorMessage db')
       Just _ -> processSuccessExport s3Prefix recipient redsiftConfig
-  return $ Aeson.toJSON $ Aeson.String "Your export request has been sent."
+  return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The Data URL will be sent to your email shortly."
 
 createS3Prefix :: String -> String -> IO String
 createS3Prefix recipient reportName = do
@@ -89,14 +89,7 @@ createS3Prefix recipient reportName = do
   return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ formatTime defaultTimeLocale "%T" now
 
 processSuccessExport :: String -> String -> RedsiftConfig -> IO ()
-processSuccessExport s3Prefix recipient redsiftConfig =
-  let bucket = s3Bucket redsiftConfig
-      access = s3Access redsiftConfig
-      secret = s3Secret redsiftConfig
-      expiry = exportExpiry redsiftConfig
-      user   = emailAccount redsiftConfig
-      pass   = emailPassword redsiftConfig
-  in do
+processSuccessExport s3Prefix recipient (RedsiftConfig _ _ _ _ _ _ access secret bucket expiry user pass) = do
     epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
     listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
     case listResult of
@@ -117,7 +110,7 @@ unloadQuery q s3Prefix redsiftConfig =
   ++ s3Access redsiftConfig
   ++ ";aws_secret_access_key="
   ++ s3Secret redsiftConfig
-  ++ "' ALLOWOVERWRITE gzip;"
+  ++ "'ALLOWOVERWRITE GZIP;" -- DO NOT TRY MANIFEST
 
 -- * common
 
