@@ -87,7 +87,7 @@ redSift.controller('DataViewController',
       $scope.tblData = tblData;
       $scope.tblName = tblData.tblName;
       $scope.dbName = tblData.dbName;
-      $timeout(function () { shortHandTableHeaders('dvtbl', 10)}, 1000);
+      $timeout(function () { shortHandTableHeaders('dvtbl', 25)}, 1000);
     });
   });
 

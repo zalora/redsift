@@ -25,7 +25,7 @@ import Redsift.Mail
 import Redsift.Config
 
 allTables :: ConnectInfo -> IO (Map.Map String [(String, Bool)])
-allTables connectInfo = withDB connectInfo $ \db -> foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables"
+allTables connectInfo = withDB connectInfo $ \db -> foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables ORDER BY table_schema, table_name DESC"
  where f tuples (schema, name, type') = Map.insertWith (++) schema [(name, type')] tuples
 
 -- As far as I can tell, postgresql-simple doesn't give us access to
