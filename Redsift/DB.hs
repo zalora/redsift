@@ -39,10 +39,10 @@ allTables connectInfo = withDB connectInfo $ \db -> foldl' f Map.empty `fmap` qu
 
 -- * issue general Query
 
-query :: ConnectInfo -> String -> RedsiftConfig -> IO Aeson.Value
-query connectInfo q redsiftConfig = withDB connectInfo $ \db -> withConnection db $ \db' ->
+query :: ConnectInfo -> String -> AppConfig -> IO Aeson.Value
+query connectInfo q (AppConfig _ rowLimit) = withDB connectInfo $ \db -> withConnection db $ \db' ->
   if isSingleQuery q then do
-      r' <- PQ.exec db' $ BU.fromString $ limitQuery (rowLimit redsiftConfig) q
+      r' <- PQ.exec db' $ BU.fromString $ limitQuery rowLimit q
       case r' of
         Nothing -> do
           err <- (BU.toString . fromJust) `fmap` PQ.errorMessage db'
@@ -73,14 +73,14 @@ query connectInfo q redsiftConfig = withDB connectInfo $ \db -> withConnection d
 
 -- * export CSV
 
-export :: ConnectInfo -> String -> String -> String -> RedsiftConfig -> IO Aeson.Value
-export connectInfo recipient reportName q redsiftConfig = do
+export :: ConnectInfo -> String -> String -> String -> S3Config -> GmailConfig -> IO Aeson.Value
+export connectInfo recipient reportName q s3Config gmailConfig = do
   forkIO $ withDB connectInfo $ \db -> withConnection db $ \db' -> do
     s3Prefix <- createS3Prefix recipient reportName
-    r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3Prefix redsiftConfig
+    r' <- PQ.exec db' $ BU.fromString $ unloadQuery q s3Prefix s3Config
     case r' of
       Nothing -> throwUserException =<< ((BU.toString . fromJust) `fmap` PQ.errorMessage db')
-      Just _ -> processSuccessExport s3Prefix recipient redsiftConfig
+      Just _ -> processSuccessExport s3Prefix recipient s3Config gmailConfig
   return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The Data URL will be sent to your email shortly."
 
 createS3Prefix :: String -> String -> IO String
@@ -89,28 +89,28 @@ createS3Prefix recipient reportName = do
   date <- fmap (show.utctDay) getCurrentTime
   return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ "_" ++ formatTime defaultTimeLocale "%T" now
 
-processSuccessExport :: String -> String -> RedsiftConfig -> IO ()
-processSuccessExport s3Prefix recipient (RedsiftConfig _ _ _ _ _ _ access secret bucket expiry user pass) = do
+processSuccessExport :: String -> String -> S3Config -> GmailConfig -> IO ()
+processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) (GmailConfig account password) = do
     epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
     listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
     case listResult of
       Left err -> throwUserException $ show err
       Right results ->
         let url = show $ signUrl (access, secret) bucket (key (head results)) (epoch + fromIntegral expiry)
-        in sendCSVExportMail user pass recipient url
+        in sendCSVExportMail account password recipient url
 
 -- Wrap normal query with UNLOAD statement and 2147483647 as MaxLimit so that the result will be just one file on S3
 -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
-unloadQuery :: String -> String -> RedsiftConfig -> String
-unloadQuery q s3Prefix redsiftConfig = 
+unloadQuery :: String -> String -> S3Config -> String
+unloadQuery q s3Prefix (S3Config bucket access secret _) = 
   "UNLOAD ('SELECT * FROM ("
   ++ limitQuery 2147483647 q
   ++ " )') to '"
-  ++ "s3://" ++ s3Bucket redsiftConfig ++ "/" ++ s3Prefix
+  ++ "s3://" ++ bucket ++ "/" ++ s3Prefix
   ++ "' credentials 'aws_access_key_id="
-  ++ s3Access redsiftConfig
+  ++ access
   ++ ";aws_secret_access_key="
-  ++ s3Secret redsiftConfig
+  ++ secret
   ++ "'ALLOWOVERWRITE GZIP;" -- DO NOT TRY MANIFEST
 
 -- * common

@@ -1,0 +1,19 @@
+app:
+  appPort: 9000
+  rowLimit: 100
+
+db:
+  host: "redcat.zalora.com"
+  port: 5439
+  user: "zlall"
+  database: "redcat"
+
+s3:
+  bucket: "zalora-redsift-oregon"
+  access: "ABASDSAMPLEACESSKEY" 
+  secret: "312312YASDASAMPLESECRETKEY"
+  expiry: 259200
+
+gmail:
+  account : "datascience@zalora.com"
+  password : "SAMPLEPASSWORD"
