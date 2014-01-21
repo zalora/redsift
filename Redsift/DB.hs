@@ -81,23 +81,14 @@ export connectInfo recipient reportName q s3Config gmailConfig = do
     case r' of
       Nothing -> throwUserException =<< ((BU.toString . fromJust) `fmap` PQ.errorMessage db')
       Just _ -> processSuccessExport s3Prefix recipient s3Config gmailConfig
-  return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The Data URL will be sent to your email shortly."
+  return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The export URL will be sent to your email shortly."
 
+-- Generate S3 Location, based on current Date, current Time, export Name, and recipient Email
 createS3Prefix :: String -> String -> IO String
 createS3Prefix recipient reportName = do
   now <- getCurrentTime
   date <- fmap (show.utctDay) getCurrentTime
-  return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ "_" ++ formatTime defaultTimeLocale "%T" now
-
-processSuccessExport :: String -> String -> S3Config -> GmailConfig -> IO ()
-processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) (GmailConfig account password) = do
-    epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
-    listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
-    case listResult of
-      Left err -> throwUserException $ show err
-      Right results ->
-        let url = show $ signUrl (access, secret) bucket (key (head results)) (epoch + fromIntegral expiry)
-        in sendCSVExportMail account password recipient url
+  return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ "_" ++ formatTime defaultTimeLocale "%T" now ++ "_"
 
 -- Wrap normal query with UNLOAD statement and 2147483647 as MaxLimit so that the result will be just one file on S3
 -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
@@ -111,7 +102,18 @@ unloadQuery q s3Prefix (S3Config bucket access secret _) =
   ++ access
   ++ ";aws_secret_access_key="
   ++ secret
-  ++ "'ALLOWOVERWRITE GZIP;" -- DO NOT TRY MANIFEST
+  ++ "'ALLOWOVERWRITE GZIP;"
+
+-- Once Data is exported to S3, find the gz export, send email accordingly
+processSuccessExport :: String -> String -> S3Config -> GmailConfig -> IO ()
+processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) (GmailConfig account password) = do
+    epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
+    listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
+    case listResult of
+      Left err -> throwUserException $ show err
+      Right results ->
+        let url = show $ signUrl (access, secret) bucket (key (head results)) (epoch + fromIntegral expiry)
+        in sendCSVExportMail account password recipient url
 
 -- * common
 
