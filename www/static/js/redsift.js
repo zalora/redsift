@@ -36,6 +36,7 @@ redSift.service('queryData', function($http, $rootScope) {
       var url = exportURL + escape(query) + "&n=" + fn;
       $http.get(url).success(function(data, status, headers, config) {
         alert(data);
+        $rootScope.$broadcast('exportRequestSent');
       }).error(function(data, status, headers, config) {
         alert("Error: could not process request - server returned " + status + ":" + data);
         $rootScope.$broadcast('queryDataServerError');
@@ -90,6 +91,9 @@ redSift.controller('MenuController',
       $scope.isLocked = false;
     });
     $scope.$on('queryDataServerError', function(event) {
+      $scope.isLocked = false;
+    });
+    $scope.$on('exportRequestSent', function(event) {
       $scope.isLocked = false;
     });
   });
