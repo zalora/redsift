@@ -1,6 +1,7 @@
 var redSift = angular.module('myApp', []);
 redSift.service('queryData', function($http, $rootScope) {
   var baseURL = "api/query?q=",
+      exportURL = "api/export?e="
       tblData = {};
   return {
     getTables: function(db, tbl) {
@@ -30,6 +31,15 @@ redSift.service('queryData', function($http, $rootScope) {
         alert("Error: could not process request - server returned " + status + ":" + data);
         $rootScope.$broadcast('queryDataServerError');
       });
+    },
+    exportQuery: function(query, fn) {
+      var url = exportURL + escape(query) + "&n=" + fn;
+      $http.get(url).success(function(data, status, headers, config) {
+        alert(data);
+      }).error(function(data, status, headers, config) {
+        alert("Error: could not process request - server returned " + status + ":" + data);
+        $rootScope.$broadcast('queryDataServerError');
+      });
     }
   }
 });
@@ -41,12 +51,18 @@ redSift.controller('MenuController',
     $scope.isLocked = false;
     $scope.databases = [];
     $scope.statusMsg = "";
-    $scope.user_query = ""
+    $scope.user_query = "";
+    $scope.user_filename = "";
 
     $scope.runQuery = function() {
       $scope.lockMenu("loading", "your query");
       queryData.getQuery($scope.user_query);
     };
+
+    $scope.runExport = function() {
+      $scope.lockMenu("sending", "your export request");
+      queryData.exportQuery($scope.user_query, $scope.user_filename);
+    }
 
     // fetch tables from API
     $http.get('api/table/list').success(function(data, status, headers, config) {
