@@ -136,7 +136,7 @@ limitQuery limit q = let qAsList = words $ filter (/=';') q in
                         Just "limit" -> case (qAsList `atMay` (length qAsList - 1)) of
                             Just m -> case readMay m of
                               Just n -> if n > limit then Just $ unwords $ init qAsList ++ [show limit]
-                                        else Just q
+                                        else Just $ unwords qAsList
                               Nothing -> Nothing
                             Nothing -> Nothing
                         Just _ -> Just $ unwords $ qAsList ++ ["limit", show limit]
