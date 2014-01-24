@@ -44,7 +44,10 @@ fileServerApp documentRoot =
 -- * api
 apiApp :: RedsiftConfig -> Application
 apiApp redsiftConfig request =
-    let (DbConfig host port user database) = db redsiftConfig
+    let (DbConfig host port database) = db redsiftConfig
+        accountConfigs = accounts redsiftConfig
+        groups = getGroups request
+        user = getRedshiftUser groups accountConfigs
         connectInfo = defaultConnectInfo {
             connectHost = host,
             connectPort = fromIntegral port,
@@ -65,6 +68,12 @@ apiApp redsiftConfig request =
             _ -> return notFoundError
         _ -> return notFoundError
     where getEmail request = cs $ snd $ head $ filter (\header -> fst header == "From") (requestHeaders request)
+          getGroups request = words $ cs $ snd $ head $ filter (\header -> fst header == "Groups") (requestHeaders request)
+          getRedshiftUser groups accountConfigs
+                | null accountConfigs = ""
+                | (groupname (head accountConfigs)) `elem` groups = redcataccount (head accountConfigs)
+                | otherwise = getRedshiftUser groups $ tail accountConfigs
+
           notFoundError = responseLBS notFound404 [] "404 not found"
 
 queryVarRequired :: Query -> ByteString -> (ByteString -> IO Response) -> IO Response

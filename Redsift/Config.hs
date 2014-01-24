@@ -10,8 +10,9 @@ data RedsiftConfig = RedsiftConfig {
     app :: AppConfig,
     db :: DbConfig,
     s3 :: S3Config,
-    gmail :: GmailConfig
-}
+    gmail :: GmailConfig,
+    accounts :: [AccountConfig]
+  } deriving Show
 
 data AppConfig = AppConfig {
     appPort :: Int,
@@ -21,7 +22,6 @@ data AppConfig = AppConfig {
 data DbConfig = DbConfig {
     host :: String,
     port :: Int,
-    user :: String,
     database :: String
   } deriving Show
 
@@ -37,13 +37,19 @@ data GmailConfig = GmailConfig {
     password :: String
   } deriving Show
 
+data AccountConfig = AccountConfig {
+    groupname :: String,
+    redcataccount :: String
+  } deriving Show
+
 -- * FromJSON
 instance FromJSON RedsiftConfig where
     parseJSON (Object m) = RedsiftConfig <$>
         m .: "app" <*>
         m .: "db" <*>
         m .: "s3" <*>
-        m .: "gmail"
+        m .: "gmail" <*>
+        m .: "accounts"
     parseJSON x = fail ("not an object: " ++ show x)       
 
 instance FromJSON AppConfig where
@@ -56,7 +62,6 @@ instance FromJSON DbConfig where
     parseJSON (Object m) = DbConfig <$>
         m .: "host" <*>
         m .: "port" <*>
-        m .: "user" <*>
         m .: "database"
     parseJSON x = fail ("not an object: " ++ show x)
 
@@ -72,6 +77,12 @@ instance FromJSON GmailConfig where
     parseJSON (Object m) = GmailConfig <$>
         m .: "account" <*>
         m .: "password"
+    parseJSON x = fail ("not an object: " ++ show x)
+
+instance FromJSON AccountConfig where
+    parseJSON (Object m) = AccountConfig <$>
+        m .: "groupname" <*>
+        m .: "redcataccount"
     parseJSON x = fail ("not an object: " ++ show x)
 
 -- * read config file
