@@ -129,6 +129,7 @@ processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) (
 -- In case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
 -- For this method, query q is assumed to have AT MOST one semicolon,
 -- otherwise it would result in error in the query function
+-- NOTE: if a query can't be "limited" -> return Nothing as it is most likely user error!
 limitQuery :: Int -> String -> Maybe String
 limitQuery limit q = let qAsList = words $ filter (/=';') q in
                      case (fmap (map toLower) (qAsList `atMay` (length qAsList - 2))) of
