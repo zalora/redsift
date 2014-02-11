@@ -29,7 +29,7 @@ in {
       uid = 103;
     };
 
-    systemd.services.csqa = {
+    systemd.services.redsift = {
       description = "redsift web application";
 
       wantedBy = [ "multi-user.target" ];
