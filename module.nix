@@ -25,8 +25,9 @@ in {
   config = mkIf cfg.enable {
     users.extraUsers.redsift = {
       description = "redsift daemon user";
+      uid = 1010;
       home = "/home/redsift";
-      uid = 103;
+      createHome = true;
     };
 
     systemd.services.redsift = {
