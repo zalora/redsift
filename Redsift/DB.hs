@@ -82,7 +82,7 @@ export connectInfo recipient reportName q s3Config gmailConfig = do
   s3Prefix <- createS3Prefix recipient reportName
   case (unloadQuery q s3Prefix s3Config) of
     Just unload -> do
-      forkIO $ withDB connectInfo $ \db -> withConnection db $ \db' -> do
+      forkIO $ mailUserExceptions gmailConfig recipient $ withDB connectInfo $ \db -> withConnection db $ \db' -> do
         r' <- PQ.exec db' $ BU.fromString unload
         case r' of
           Nothing -> throwUserException =<< ((BU.toString . fromJust) `fmap` PQ.errorMessage db')
@@ -115,14 +115,14 @@ unloadQuery q s3Prefix (S3Config bucket access secret _) = do
 
 -- Once Data is exported to S3, find the gz export, send email accordingly
 processSuccessExport :: String -> String -> S3Config -> GmailConfig -> IO ()
-processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) (GmailConfig account password) = do
+processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) gmailConfig = do
     epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
     listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
     case listResult of
       Left err -> throwUserException $ show err
       Right (result : _) ->
         let url = show $ signUrl (access, secret) bucket (key result) (epoch + fromIntegral expiry)
-        in sendCSVExportMail account password recipient url
+        in sendCSVExportMail gmailConfig recipient url
       Right [] -> throwUserException ("redsift export: s3 file with the given prefix could not be found: " ++ s3Prefix)
 
 
