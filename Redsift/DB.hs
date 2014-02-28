@@ -19,6 +19,7 @@ import System.Locale
 import Control.Applicative
 import Control.Exception (bracket)
 import Safe
+import Data.String
 
 import Redsift.Exception
 import Redsift.SignUrl
@@ -82,11 +83,10 @@ export connectInfo recipient reportName q s3Config gmailConfig = do
   s3Prefix <- createS3Prefix recipient reportName
   case (unloadQuery q s3Prefix s3Config) of
     Just unload -> do
-      forkIO $ mailUserExceptions gmailConfig recipient $ withDB connectInfo $ \db -> withConnection db $ \db' -> do
-        r' <- PQ.exec db' $ BU.fromString unload
-        case r' of
-          Nothing -> throwUserException =<< ((BU.toString . fromJust) `fmap` PQ.errorMessage db')
-          Just _ -> processSuccessExport s3Prefix recipient s3Config gmailConfig
+      forkIO $ mailUserExceptions gmailConfig recipient $ mapExceptionIO sqlToUser $
+        withDB connectInfo $ \db -> do
+            execute_ db $ fromString unload
+            processSuccessExport s3Prefix recipient s3Config gmailConfig
       return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The export URL will be sent to your email shortly."
     Nothing -> throwUserException "The given query is not allowed."
 

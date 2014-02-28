@@ -3,10 +3,12 @@ module Redsift.Exception where
 
 import Control.Exception
 import Data.Typeable
+import Data.Monoid
 import Network.Wai
 import System.IO (hPutStrLn, stderr)
 import Data.String.Conversions (cs)
 import Network.HTTP.Types (internalServerError500)
+import Database.PostgreSQL.Simple (SqlError(..))
 
 import Redsift.Config
 import Redsift.Mail
@@ -45,3 +47,13 @@ mailUserExceptions gmailConfig recipient =
                 "Feel free to get in touch with the data science team." :
                 []
         throwIO e
+
+sqlToUser :: SqlError -> UserException
+sqlToUser (SqlError _ _ message detail hint) =
+    UserException $ cs (message <<>> detail <<>> hint)
+  where
+    a <<>> b = a <> " " <> b
+
+mapExceptionIO :: (Exception e1, Exception e2) => (e1 -> e2) -> IO a -> IO a
+mapExceptionIO f =
+    handle $ \ x -> throwIO $ f x
