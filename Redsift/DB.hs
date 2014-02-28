@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Redsift.DB (allTables, query, export) where
+module Redsift.DB (allTables, Redsift.DB.query, export) where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.UTF8 as BU
 import Data.List (foldl', elemIndices)
 import Data.Maybe (fromJust)
 import qualified Database.PostgreSQL.LibPQ as PQ
-import Database.PostgreSQL.Simple hiding (query)
+import Database.PostgreSQL.Simple as Simple
 import Database.PostgreSQL.Simple.Internal (withConnection)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
@@ -20,6 +20,7 @@ import Control.Applicative
 import Control.Exception (bracket)
 import Safe
 import Data.String
+import Data.String.Conversions
 
 import Redsift.Exception
 import Redsift.SignUrl
@@ -81,12 +82,19 @@ query connectInfo q (AppConfig _ rowLimit) = withDB connectInfo $ \db -> withCon
 export :: ConnectInfo -> String -> String -> String -> S3Config -> GmailConfig -> IO Aeson.Value
 export connectInfo recipient reportName q s3Config gmailConfig = do
   s3Prefix <- createS3Prefix recipient reportName
-  case (unloadQuery q s3Prefix s3Config) of
-    Just unload -> do
+  -- 2147483647 as MaxLimit so that the result will be just one file on S3
+  -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
+  case limitQuery 2147483647 q of
+    Just q -> do
       forkIO $ mailUserExceptions gmailConfig recipient $ mapExceptionIO sqlToUser $
-        withDB connectInfo $ \db -> do
-            execute_ db $ fromString unload
-            processSuccessExport s3Prefix recipient s3Config gmailConfig
+        withDB connectInfo $ \ db -> do
+            escapedQuery <- withConnection db $ \ raw -> PQ.escapeStringConn raw (cs q)
+            case escapedQuery of
+                Nothing -> throwUserException "query escaping failed"
+                Just escapedQuery -> do
+                    let unload = unloadQuery s3Prefix s3Config (cs escapedQuery :: String)
+                    Simple.execute_ db (fromString $ unload)
+                    processSuccessExport s3Prefix recipient s3Config gmailConfig
       return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The export URL will be sent to your email shortly."
     Nothing -> throwUserException "The given query is not allowed."
 
@@ -97,21 +105,18 @@ createS3Prefix recipient reportName = do
   date <- fmap (show.utctDay) getCurrentTime
   return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ "_" ++ formatTime defaultTimeLocale "%T" now ++ "_"
 
--- Wrap normal query with UNLOAD statement and 2147483647 as MaxLimit so that the result will be just one file on S3
--- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
-unloadQuery :: String -> String -> S3Config -> Maybe String
-unloadQuery q s3Prefix (S3Config bucket access secret _) = do
-  case (limitQuery 2147483647 q) of
-    Just query -> Just $ "UNLOAD ('SELECT * FROM ("
-                    ++ query
-                    ++ " )') to '"
-                    ++ "s3://" ++ bucket ++ "/" ++ s3Prefix
-                    ++ "' credentials 'aws_access_key_id="
-                    ++ access
-                    ++ ";aws_secret_access_key="
-                    ++ secret
-                    ++ "'ALLOWOVERWRITE GZIP;"
-    Nothing -> Nothing
+-- Returns an UNLOAD statement for a given query.
+unloadQuery :: String -> S3Config -> String -> String
+unloadQuery s3Prefix (S3Config bucket access secret _) query =
+    "UNLOAD ('SELECT * FROM ("
+    ++ query
+    ++ " )') to '"
+    ++ "s3://" ++ bucket ++ "/" ++ s3Prefix
+    ++ "' credentials 'aws_access_key_id="
+    ++ access
+    ++ ";aws_secret_access_key="
+    ++ secret
+    ++ "'ALLOWOVERWRITE GZIP;"
 
 -- Once Data is exported to S3, find the gz export, send email accordingly
 processSuccessExport :: String -> String -> S3Config -> GmailConfig -> IO ()
