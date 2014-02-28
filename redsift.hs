@@ -26,8 +26,12 @@ main = do
     redsiftConfig <- readRedsiftConfig
     let port = appPort $ app redsiftConfig
     documentRoot <- (</> "www") <$> getDataDir
-    hPutStrLn stderr ("Attempting to listen on port " ++ show port)
-    run port $ handleApp errorHandler $
+    let settings = defaultSettings{
+            settingsPort = port,
+            settingsBeforeMainLoop =
+                hPutStrLn stderr ("listening on port " ++ show port)
+          }
+    runSettings settings $ handleApp errorHandler $
         mapUrls (redsiftApp redsiftConfig documentRoot)
 
 -- | Routing between static files and the API
