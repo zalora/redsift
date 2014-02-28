@@ -120,9 +120,11 @@ processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) (
     listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
     case listResult of
       Left err -> throwUserException $ show err
-      Right results ->
-        let url = show $ signUrl (access, secret) bucket (key (head results)) (epoch + fromIntegral expiry)
+      Right (result : _) ->
+        let url = show $ signUrl (access, secret) bucket (key result) (epoch + fromIntegral expiry)
         in sendCSVExportMail account password recipient url
+      Right [] -> throwUserException ("redsift export: s3 file with the given prefix could not be found: " ++ s3Prefix)
+
 
 -- * common
 

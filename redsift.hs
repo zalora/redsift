@@ -12,6 +12,7 @@ import Network.Wai
 import Network.Wai.Handler.Warp hiding (Connection)
 import Network.Wai.Application.Static
 import Network.Wai.UrlMap
+import Safe
 import System.FilePath
 import System.IO
 
@@ -71,8 +72,8 @@ apiApp redsiftConfig request =
                     return $ responseLBS ok200 [] (encode (toJSON result))
             _ -> return notFoundError
         _ -> return notFoundError
-    where getEmail request = cs $ snd $ head $ filter (\header -> fst header == "From") (requestHeaders request)
-          getGroups request = words $ cs $ snd $ head $ filter (\header -> fst header == "Groups") (requestHeaders request)
+    where getEmail request = cs $ snd $ headNote "'From' header not set" $ filter (\header -> fst header == "From") (requestHeaders request)
+          getGroups request = words $ cs $ snd $ headNote "'Groups' header not set" $ filter (\header -> fst header == "Groups") (requestHeaders request)
           getRedshiftUser groups accountConfigs
                 | null accountConfigs = ""
                 | (groupname (head accountConfigs)) `elem` groups = redcataccount (head accountConfigs)
