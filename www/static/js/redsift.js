@@ -5,7 +5,7 @@ redSift.service('queryData', function($http, $rootScope) {
       tblData = {};
   return {
     getTables: function(db, tbl) {
-      var url = baseURL + "SELECT * FROM " + db + "." + tbl + " ORDER BY random() LIMIT 100;";
+      var url = baseURL + "SELECT * FROM " + db + "." + tbl + " LIMIT 100;";
       $http.get(url).success(function(data, status, headers, config) {
         tblData.tblHeaders = data[0]
         tblData.tblRows = data.slice(1, data.length);
