@@ -39,7 +39,7 @@ in {
         Type = "idle";
         PIDFile = "/run/redsift.pid";
         ExecStart = "${cfg.package}/bin/redsift";
-        Restart = "always";
+        Restart = "on-failure";
         User = "redsift";
         WorkingDirectory = "${config.users.extraUsers.redsift.home}";
       };
