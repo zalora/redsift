@@ -5,7 +5,6 @@ import Control.Applicative ((<$>), (<|>))
 import Data.Aeson (ToJSON(..), encode)
 import Data.ByteString (ByteString)
 import Data.String.Conversions
-import Database.PostgreSQL.Simple hiding (query, Query)
 import Filesystem.Path.CurrentOS (decodeString)
 import Network.HTTP.Types
 import Network.Wai
@@ -49,36 +48,22 @@ fileServerApp documentRoot =
 -- * api
 apiApp :: RedsiftConfig -> Application
 apiApp redsiftConfig request =
-    let (DbConfig host port database) = db redsiftConfig
-        accountConfigs = accounts redsiftConfig
-        groups = getGroups request
-        user = getRedshiftUser groups accountConfigs
-        connectInfo = defaultConnectInfo {
-            connectHost = host,
-            connectPort = fromIntegral port,
-            connectUser = user,
-            connectDatabase = database}
+    let dbConfig = db redsiftConfig
     in case requestMethod request of
         "GET" -> case pathInfo request of
             ["table", "list"] -> do
-                tables <- allTables connectInfo
+                tables <- allTables dbConfig
                 return $ responseLBS ok200 [] (encode (toJSON tables))
             ["query"] -> queryVarRequired (queryString request) "q" $ \ q -> do
-                result <- query connectInfo (cs q) (app redsiftConfig)
+                result <- query dbConfig (cs q) (app redsiftConfig)
                 return $ responseLBS ok200 [] (encode (toJSON result))
             ["export"] -> queryVarRequired (queryString request) "e" $ \ e ->
                 queryVarRequired (queryString request) "n" $ \ n -> do
-                    result <- export connectInfo (getEmail request) (cs n) (cs e) (s3 redsiftConfig) (gmail redsiftConfig)
+                    result <- export dbConfig (getEmail request) (cs n) (cs e) (s3 redsiftConfig) (gmail redsiftConfig)
                     return $ responseLBS ok200 [] (encode (toJSON result))
             _ -> return notFoundError
         _ -> return notFoundError
     where getEmail request = cs $ snd $ headNote "'From' header not set" $ filter (\header -> fst header == "From") (requestHeaders request)
-          getGroups request = words $ cs $ snd $ headNote "'Groups' header not set" $ filter (\header -> fst header == "Groups") (requestHeaders request)
-          getRedshiftUser groups accountConfigs
-                | null accountConfigs = ""
-                | (groupname (head accountConfigs)) `elem` groups = redcataccount (head accountConfigs)
-                | otherwise = getRedshiftUser groups $ tail accountConfigs
-
           notFoundError = responseLBS notFound404 [] "404 not found"
 
 queryVarRequired :: Query -> ByteString -> (ByteString -> IO Response) -> IO Response

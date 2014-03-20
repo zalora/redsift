@@ -1,17 +1,19 @@
-{-# language ScopedTypeVariables, OverloadedStrings, DataKinds #-}
+{-# language ScopedTypeVariables, OverloadedStrings, DataKinds,
+             FlexibleInstances #-}
 
 module Redsift.Config where
 
 import Control.Applicative
-import Data.Yaml
+import Data.Configurator as C
+import Data.Configurator.Types as C
+import Data.Text
 
 -- * Config Data Type
 data RedsiftConfig = RedsiftConfig {
     app :: AppConfig,
     db :: DbConfig,
     s3 :: S3Config,
-    gmail :: GmailConfig,
-    accounts :: [AccountConfig]
+    gmail :: GmailConfig
   } deriving Show
 
 data AppConfig = AppConfig {
@@ -20,9 +22,7 @@ data AppConfig = AppConfig {
   } deriving Show
 
 data DbConfig = DbConfig {
-    host :: String,
-    port :: Int,
-    database :: String
+    dbConnectionString :: String
   } deriving Show
 
 data S3Config = S3Config {
@@ -37,56 +37,40 @@ data GmailConfig = GmailConfig {
     password :: String
   } deriving Show
 
-data AccountConfig = AccountConfig {
-    groupname :: String,
-    redcataccount :: String
-  } deriving Show
 
--- * FromJSON
-instance FromJSON RedsiftConfig where
-    parseJSON (Object m) = RedsiftConfig <$>
-        m .: "app" <*>
-        m .: "db" <*>
-        m .: "s3" <*>
-        m .: "gmail" <*>
-        m .: "accounts"
-    parseJSON x = fail ("not an object: " ++ show x)       
+class FromGroup a where
+    getFromGroup :: Config -> IO a
 
-instance FromJSON AppConfig where
-    parseJSON (Object m) = AppConfig <$>
-        m .: "appPort" <*>
-        m .: "rowLimit"
-    parseJSON x = fail ("not an object: " ++ show x)
+instance FromGroup AppConfig where
+    getFromGroup c = AppConfig <$>
+        require c "port" <*>
+        require c "rowLimit"
 
-instance FromJSON DbConfig where
-    parseJSON (Object m) = DbConfig <$>
-        m .: "host" <*>
-        m .: "port" <*>
-        m .: "database"
-    parseJSON x = fail ("not an object: " ++ show x)
+instance FromGroup DbConfig where
+    getFromGroup c = DbConfig <$>
+        require c "redcatConnectionString"
 
-instance FromJSON S3Config where
-    parseJSON (Object m) = S3Config <$>
-        m .: "bucket" <*>
-        m .: "access" <*>
-        m .: "secret" <*>
-        m .: "expiry"
-    parseJSON x = fail ("not an object: " ++ show x)
+instance FromGroup S3Config where
+    getFromGroup c = S3Config <$>
+        require c "bucket" <*>
+        require c "access" <*>
+        require c "secret" <*>
+        require c "expiry"
 
-instance FromJSON GmailConfig where
-    parseJSON (Object m) = GmailConfig <$>
-        m .: "account" <*>
-        m .: "password"
-    parseJSON x = fail ("not an object: " ++ show x)
+instance FromGroup GmailConfig where
+    getFromGroup c = GmailConfig <$>
+        require c "account" <*>
+        require c "password"
 
-instance FromJSON AccountConfig where
-    parseJSON (Object m) = AccountConfig <$>
-        m .: "groupname" <*>
-        m .: "redcataccount"
-    parseJSON x = fail ("not an object: " ++ show x)
 
 -- * read config file
 readRedsiftConfig :: IO RedsiftConfig
-readRedsiftConfig =
-    either (error . show) id <$>
-    decodeFileEither "./Config/redsift.config"
+readRedsiftConfig = do
+    c <- load [Required "./Config/redsift.config"]
+    let l :: FromGroup a => Text -> IO a
+        l n = getFromGroup (subconfig n c)
+    RedsiftConfig <$>
+        l "app" <*>
+        l "db" <*>
+        l "s3" <*>
+        l "gmail"

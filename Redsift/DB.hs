@@ -27,8 +27,8 @@ import Redsift.SignUrl
 import Redsift.Mail
 import Redsift.Config
 
-allTables :: ConnectInfo -> IO (Map.Map String [(String, Bool)])
-allTables connectInfo = withDB connectInfo $ \db -> foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables ORDER BY table_schema, table_name DESC"
+allTables :: DbConfig -> IO (Map.Map String [(String, Bool)])
+allTables dbConfig = withDB dbConfig $ \db -> foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables ORDER BY table_schema, table_name DESC"
  where f tuples (schema, name, type') = Map.insertWith (++) schema [(name, type')] tuples
 
 -- As far as I can tell, postgresql-simple doesn't give us access to
@@ -42,8 +42,8 @@ allTables connectInfo = withDB connectInfo $ \db -> foldl' f Map.empty `fmap` qu
 
 -- * issue general Query
 
-query :: ConnectInfo -> String -> AppConfig -> IO Aeson.Value
-query connectInfo q (AppConfig _ rowLimit) = withDB connectInfo $ \db -> withConnection db $ \db' ->
+query :: DbConfig -> String -> AppConfig -> IO Aeson.Value
+query dbConfig q (AppConfig _ rowLimit) = withDB dbConfig $ \db -> withConnection db $ \db' ->
   if isSingleQuery q then do
     case (limitQuery rowLimit q) of
       Just query -> do
@@ -79,15 +79,15 @@ query connectInfo q (AppConfig _ rowLimit) = withDB connectInfo $ \db -> withCon
 
 -- * export CSV
 
-export :: ConnectInfo -> String -> String -> String -> S3Config -> GmailConfig -> IO Aeson.Value
-export connectInfo recipient reportName q s3Config gmailConfig = do
+export :: DbConfig -> String -> String -> String -> S3Config -> GmailConfig -> IO Aeson.Value
+export dbConfig recipient reportName q s3Config gmailConfig = do
   s3Prefix <- createS3Prefix recipient reportName
   -- 2147483647 as MaxLimit so that the result will be just one file on S3
   -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
   case limitQuery 2147483647 q of
     Just q -> do
       forkIO $ mailUserExceptions gmailConfig recipient $ mapExceptionIO sqlToUser $
-        withDB connectInfo $ \ db -> do
+        withDB dbConfig $ \ db -> do
             escapedQuery <- withConnection db $ \ raw -> PQ.escapeStringConn raw (cs q)
             case escapedQuery of
                 Nothing -> throwUserException "query escaping failed"
@@ -150,5 +150,8 @@ limitQuery limit q = let qAsList = words $ filter (/=';') q in
                         Nothing -> Nothing
 
 -- Make sure a connection is closed after we finished with the query.
-withDB :: ConnectInfo -> (Connection -> IO a) -> IO a
-withDB connectInfo = bracket (connect connectInfo) close
+withDB :: DbConfig -> (Connection -> IO a) -> IO a
+withDB dbConfig =
+    bracket
+        (connectPostgreSQL (cs (dbConnectionString dbConfig)))
+        close

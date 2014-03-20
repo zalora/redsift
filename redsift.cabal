@@ -28,6 +28,7 @@ executable redsift
                        MissingH,
                        base >=4.6 && <4.7,
                        bytestring,
+                       configurator,
                        containers,
                        filepath,
                        hS3 >= 0.5,
@@ -48,8 +49,7 @@ executable redsift
                        wai >= 2.0,
                        wai-app-static,
                        wai-extra >= 2.0.2,
-                       warp >= 2.0,
-                       yaml == 0.8.*
+                       warp >= 2.0
   default-language:    Haskell2010
   other-extensions:    FlexibleInstances
   default-extensions:  OverloadedStrings, ScopedTypeVariables

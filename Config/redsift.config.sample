@@ -1,19 +1,22 @@
-app:
-  appPort: 9000
-  rowLimit: 100
 
-db:
-  host: "redcat.zalora.com"
-  port: 5439
-  user: "zlall"
-  database: "redcat"
+app {
+    port = 9000
+    rowLimit = 100
+  }
 
-s3:
-  bucket: "zalora-redsift-oregon"
-  access: "ABASDSAMPLEACESSKEY" 
-  secret: "312312YASDASAMPLESECRETKEY"
-  expiry: 259200
+db {
+    redcatConnectionString =
+        "user='USER' password='PASSWORD' host='HOST' port=PORT dbname='DBNAME'"
+}
 
-gmail:
-  account : "datascience@zalora.com"
-  password : "SAMPLEPASSWORD"
+s3 {
+    bucket = "zalora-redsift-oregon"
+    access = "ABASDSAMPLEACESSKEY"
+    secret = "312312YASDASAMPLESECRETKEY"
+    expiry = 259200
+  }
+
+gmail {
+    account = "csvLinkSender@gmail.com"
+    password = "SAMPLEPASSWORD"
+  }
