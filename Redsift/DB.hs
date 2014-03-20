@@ -44,7 +44,7 @@ allTables dbConfig = withDB dbConfig $ \db -> foldl' f Map.empty `fmap` query_ d
 
 -- * issue general Query
 
-query :: DbConfig -> String -> String -> AppConfig -> IO Aeson.Value
+query :: DbConfig -> Address -> String -> AppConfig -> IO Aeson.Value
 query dbConfig user q (AppConfig _ rowLimit) = withDB dbConfig $ \db -> withConnection db $ \db' ->
   if isSingleQuery q then do
     case (limitQuery rowLimit q) of
@@ -81,14 +81,14 @@ query dbConfig user q (AppConfig _ rowLimit) = withDB dbConfig $ \db -> withConn
 
 -- * export CSV
 
-export :: DbConfig -> String -> String -> String -> S3Config -> GmailConfig -> IO Aeson.Value
-export dbConfig recipient reportName q s3Config gmailConfig = do
+export :: DbConfig -> Address -> String -> String -> S3Config -> EmailConfig -> IO Aeson.Value
+export dbConfig recipient reportName q s3Config emailConfig = do
   s3Prefix <- createS3Prefix recipient reportName
   -- 2147483647 as MaxLimit so that the result will be just one file on S3
   -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
   case limitQuery 2147483647 q of
     Just q -> do
-      forkIO $ mailUserExceptions gmailConfig recipient $ mapExceptionIO sqlToUser $
+      forkIO $ mailUserExceptions emailConfig recipient $ mapExceptionIO sqlToUser $
         withDB dbConfig $ \ db -> do
             escapedQuery <- withConnection db $ \ raw -> PQ.escapeStringConn raw (cs q)
             case escapedQuery of
@@ -96,16 +96,16 @@ export dbConfig recipient reportName q s3Config gmailConfig = do
                 Just escapedQuery -> do
                     let unload = unloadQuery s3Prefix s3Config (cs escapedQuery :: String)
                     Simple.execute_ db . fromString =<< prepareQuery recipient unload
-                    processSuccessExport s3Prefix recipient s3Config gmailConfig
+                    processSuccessExport s3Prefix recipient s3Config emailConfig
       return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The export URL will be sent to your email shortly."
     Nothing -> throwUserException "The given query is not allowed."
 
 -- Generate S3 Location, based on current Date, current Time, export Name, and recipient Email
-createS3Prefix :: String -> String -> IO String
+createS3Prefix :: Address -> String -> IO String
 createS3Prefix recipient reportName = do
   now <- getCurrentTime
   date <- fmap (show.utctDay) getCurrentTime
-  return $ recipient ++ "/" ++ date ++ "/" ++ reportName ++ "_" ++ formatTime defaultTimeLocale "%T" now ++ "_"
+  return $ cs (addressEmail recipient) ++ "/" ++ date ++ "/" ++ reportName ++ "_" ++ formatTime defaultTimeLocale "%T" now ++ "_"
 
 -- Returns an UNLOAD statement for a given query.
 unloadQuery :: String -> S3Config -> String -> String
@@ -121,7 +121,7 @@ unloadQuery s3Prefix (S3Config bucket access secret _) query =
     ++ "'ALLOWOVERWRITE GZIP;"
 
 -- Once Data is exported to S3, find the gz export, send email accordingly
-processSuccessExport :: String -> String -> S3Config -> GmailConfig -> IO ()
+processSuccessExport :: String -> Address -> S3Config -> EmailConfig -> IO ()
 processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) gmailConfig = do
     epoch <- read <$> formatTime defaultTimeLocale "%s" <$> getCurrentTime
     listResult <- listAllObjects (amazonS3Connection access secret) bucket (ListRequest s3Prefix ""  "" 0)
@@ -137,9 +137,11 @@ processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) g
 
 -- Adds a comment containing the sproxy user (email) and logs the query to stderr.
 -- Every query sent to redcat has to pass this function.
-prepareQuery :: String -> String -> IO String
+prepareQuery :: Address -> String -> IO String
 prepareQuery user q = do
-    let withUserComment = printf "/* redsift query for user '%s' */ " user ++ q
+    let withUserComment =
+            printf "/* redsift query for user '%s' */ " (cs (addressEmail user) :: String) ++
+            q
     hPutStrLn stderr ("redcat query: " ++ withUserComment)
     return withUserComment
 

@@ -87,12 +87,15 @@ apiApp redsiftConfig request =
                 return $ responseLBS ok200 [] (encode (toJSON result))
             ["export"] -> queryVarRequired (queryString request) "e" $ \ e ->
                 queryVarRequired (queryString request) "n" $ \ n -> do
-                    result <- export dbConfig (getEmail request) (cs n) (cs e) (s3 redsiftConfig) (gmail redsiftConfig)
+                    result <- export dbConfig (getEmail request) (cs n) (cs e) (s3 redsiftConfig) (email redsiftConfig)
                     return $ responseLBS ok200 [] (encode (toJSON result))
             _ -> return notFoundError
         _ -> return notFoundError
-    where getEmail request = cs $ snd $ headNote "'From' header not set" $ filter (\header -> fst header == "From") (requestHeaders request)
-          notFoundError = responseLBS notFound404 [] "404 not found"
+    where
+        getEmail :: Request -> Address
+        getEmail request = Address Nothing $
+            cs $ snd $ headNote "'From' header not set" $ filter (\header -> fst header == "From") (requestHeaders request)
+        notFoundError = responseLBS notFound404 [] "404 not found"
 
 queryVarRequired :: Query -> ByteString -> (ByteString -> IO Response) -> IO Response
 queryVarRequired query key cont = case lookup key query of

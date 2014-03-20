@@ -36,10 +36,10 @@ handleApp errorHandler app request =
     handle errorHandler (app request)
 
 -- Catches UserExceptions and mails them to the given receiver.
-mailUserExceptions :: GmailConfig -> String -> IO a -> IO a
-mailUserExceptions gmailConfig recipient =
+mailUserExceptions :: EmailConfig -> Address -> IO a -> IO a
+mailUserExceptions emailConfig recipient =
     handle $ \ e@(UserException m) -> do
-        sendMail gmailConfig recipient "Your Redsift Export Failed" $
+        sendMail emailConfig recipient "Your Redsift Export Failed" $
             unlines $
                 "We are very sorry, but your redsift export process did not go through successfully. Here's the error message:" :
                 m :

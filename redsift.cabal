@@ -40,7 +40,7 @@ executable redsift
                        postgresql-libpq,
                        postgresql-simple,
                        safe,
-                       smtps-gmail >= 1.0.0,
+                       mime-mail,
                        split,
                        string-conversions,
                        system-filepath,

@@ -1,19 +1,24 @@
 {-# language ScopedTypeVariables, OverloadedStrings, DataKinds,
              FlexibleInstances #-}
 
-module Redsift.Config where
+module Redsift.Config (
+    module Redsift.Config,
+    Address(..),
+  ) where
 
 import Control.Applicative
 import Data.Configurator as C
 import Data.Configurator.Types as C
 import Data.Text
+import Network.Mail.Mime
+
 
 -- * Config Data Type
 data RedsiftConfig = RedsiftConfig {
     app :: AppConfig,
     db :: DbConfig,
     s3 :: S3Config,
-    gmail :: GmailConfig
+    email :: EmailConfig
   } deriving Show
 
 data AppConfig = AppConfig {
@@ -32,10 +37,12 @@ data S3Config = S3Config {
     expiry :: Int -- in seconds
   } deriving Show
 
-data GmailConfig = GmailConfig {
-    account :: String,
-    password :: String
-  } deriving Show
+data EmailConfig = EmailConfig {
+    account :: Address
+  }
+
+instance Show EmailConfig where
+    show (EmailConfig a) = show (addressEmail a)
 
 
 class FromGroup a where
@@ -57,10 +64,9 @@ instance FromGroup S3Config where
         require c "secret" <*>
         require c "expiry"
 
-instance FromGroup GmailConfig where
-    getFromGroup c = GmailConfig <$>
-        require c "account" <*>
-        require c "password"
+instance FromGroup EmailConfig where
+    getFromGroup c = EmailConfig . Address Nothing <$>
+        require c "account"
 
 
 -- * read config file

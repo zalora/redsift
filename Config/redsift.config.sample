@@ -18,5 +18,4 @@ s3 {
 
 gmail {
     account = "csvLinkSender@gmail.com"
-    password = "SAMPLEPASSWORD"
   }
