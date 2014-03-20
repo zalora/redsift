@@ -22,6 +22,7 @@ import Safe
 import Data.String
 import Data.String.Conversions
 import Text.Printf
+import System.IO
 
 import Redsift.Exception
 import Redsift.SignUrl
@@ -48,7 +49,7 @@ query dbConfig user q (AppConfig _ rowLimit) = withDB dbConfig $ \db -> withConn
   if isSingleQuery q then do
     case (limitQuery rowLimit q) of
       Just query -> do
-        r' <- PQ.exec db' $ BU.fromString (addUserComment user query)
+        r' <- PQ.exec db' . BU.fromString =<< prepareQuery user query
         case r' of
           Nothing -> do
             err <- (BU.toString . fromJust) `fmap` PQ.errorMessage db'
@@ -94,7 +95,7 @@ export dbConfig recipient reportName q s3Config gmailConfig = do
                 Nothing -> throwUserException "query escaping failed"
                 Just escapedQuery -> do
                     let unload = unloadQuery s3Prefix s3Config (cs escapedQuery :: String)
-                    Simple.execute_ db (fromString $ addUserComment recipient unload)
+                    Simple.execute_ db . fromString =<< prepareQuery recipient unload
                     processSuccessExport s3Prefix recipient s3Config gmailConfig
       return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The export URL will be sent to your email shortly."
     Nothing -> throwUserException "The given query is not allowed."
@@ -134,10 +135,13 @@ processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) g
 
 -- * common
 
--- Adds a comment containing the sproxy user (email)
-addUserComment :: String -> String -> String
-addUserComment user q =
-    printf "-- redsift query for user '%s'\n" user ++ q
+-- Adds a comment containing the sproxy user (email) and logs the query to stderr.
+-- Every query sent to redcat has to pass this function.
+prepareQuery :: String -> String -> IO String
+prepareQuery user q = do
+    let withUserComment = printf "-- redsift query for user '%s'\n" user ++ q
+    hPutStrLn stderr ("redcat query: " ++ withUserComment)
+    return withUserComment
 
 -- In case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
 -- For this method, query q is assumed to have AT MOST one semicolon,
