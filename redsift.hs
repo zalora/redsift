@@ -55,11 +55,10 @@ main = do
     redsiftConfig <- readRedsiftConfig (fromMaybe defaultConfigFile (config options))
     let port = appPort $ app redsiftConfig
     documentRoot <- (</> "www") <$> getDataDir
-    let settings = defaultSettings{
-            settingsPort = port,
-            settingsBeforeMainLoop =
-                hPutStrLn stderr ("listening on port " ++ show port)
-          }
+    let settings =
+            setPort port $
+            setBeforeMainLoop (hPutStrLn stderr ("listening on port " ++ show port)) $
+            defaultSettings
     runSettings settings $ handleApp errorHandler $
         mapUrls (redsiftApp redsiftConfig documentRoot)
 
