@@ -139,7 +139,7 @@ processSuccessExport s3Prefix recipient (S3Config bucket access secret expiry) g
 -- Every query sent to redcat has to pass this function.
 prepareQuery :: String -> String -> IO String
 prepareQuery user q = do
-    let withUserComment = printf "-- redsift query for user '%s'\n" user ++ q
+    let withUserComment = printf "/* redsift query for user '%s' */ " user ++ q
     hPutStrLn stderr ("redcat query: " ++ withUserComment)
     return withUserComment
 
