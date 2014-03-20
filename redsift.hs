@@ -84,7 +84,7 @@ apiApp redsiftConfig request =
                 tables <- allTables dbConfig
                 return $ responseLBS ok200 [] (encode (toJSON tables))
             ["query"] -> queryVarRequired (queryString request) "q" $ \ q -> do
-                result <- query dbConfig (cs q) (app redsiftConfig)
+                result <- query dbConfig (getEmail request) (cs q) (app redsiftConfig)
                 return $ responseLBS ok200 [] (encode (toJSON result))
             ["export"] -> queryVarRequired (queryString request) "e" $ \ e ->
                 queryVarRequired (queryString request) "n" $ \ n -> do
