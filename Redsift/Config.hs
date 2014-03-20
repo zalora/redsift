@@ -64,9 +64,9 @@ instance FromGroup GmailConfig where
 
 
 -- * read config file
-readRedsiftConfig :: IO RedsiftConfig
-readRedsiftConfig = do
-    c <- load [Required "./Config/redsift.config"]
+readRedsiftConfig :: FilePath -> IO RedsiftConfig
+readRedsiftConfig configFile = do
+    c <- load [Required configFile]
     let l :: FromGroup a => Text -> IO a
         l n = getFromGroup (subconfig n c)
     RedsiftConfig <$>

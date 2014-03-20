@@ -1,11 +1,12 @@
 {-# language OverloadedStrings #-}
 module Main where
 
-import Control.Applicative ((<$>), (<|>))
 import Data.Aeson (ToJSON(..), encode)
 import Data.ByteString (ByteString)
+import Data.Maybe
 import Data.String.Conversions
 import Filesystem.Path.CurrentOS (decodeString)
+import Options.Applicative
 import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Handler.Warp hiding (Connection)
@@ -21,9 +22,37 @@ import Redsift.DB
 import Redsift.Exception
 import Redsift.Config
 
+
+-- * command line options
+
+data Options = Options {
+    config :: Maybe FilePath
+  }
+
+optionsParser :: ParserInfo Options
+optionsParser =
+    info (helper <*> (Options <$> config)) fullDesc
+  where
+    config :: Parser (Maybe FilePath)
+    config = mkOptional $ strOption (
+        long "config" <>
+        short 'c' <>
+        metavar "CONFIGFILE" <>
+        help ("config file path (default: " ++ defaultConfigFile ++ ")"))
+
+    mkOptional :: Parser a -> Parser (Maybe a)
+    mkOptional p = (Just <$> p) <|> pure Nothing
+
+defaultConfigFile :: FilePath
+defaultConfigFile = "./Config/redsift.config"
+
+
+-- * main entry function
+
 main :: IO ()
 main = do
-    redsiftConfig <- readRedsiftConfig
+    options <- execParser optionsParser
+    redsiftConfig <- readRedsiftConfig (fromMaybe defaultConfigFile (config options))
     let port = appPort $ app redsiftConfig
     documentRoot <- (</> "www") <$> getDataDir
     let settings = defaultSettings{
