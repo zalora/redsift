@@ -66,7 +66,7 @@ instance FromGroup S3Config where
 
 instance FromGroup EmailConfig where
     getFromGroup c = EmailConfig . Address Nothing <$>
-        require c "account"
+        require c "sender"
 
 
 -- * read config file
@@ -79,4 +79,4 @@ readRedsiftConfig configFile = do
         l "app" <*>
         l "db" <*>
         l "s3" <*>
-        l "gmail"
+        l "email"

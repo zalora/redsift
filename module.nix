@@ -21,11 +21,16 @@ let
       expiry = ${toString cfg.s3.expiry}
       import "${cfg.s3.credentialsFile}"
     }
+
+    email {
+      sender = "${cfg.emailSenderAddress}"
+    }
   '';
 
 in {
   imports = [
     <zalora-nix-lib/daemon-users-module.nix>
+    <zalora-nix-lib/mail-relay.nix>
   ];
 
   options = {
@@ -61,6 +66,13 @@ in {
         '';
       };
 
+      emailSenderAddress = mkOption {
+        type = types.string;
+        description = ''
+          The sender address of the emails sent from redsift.
+        '';
+      };
+
       s3 = {
         bucket = mkOption {
           type = types.str;
@@ -68,7 +80,7 @@ in {
         };
 
         expiry = mkOption {
-          type = types.str;
+          type = types.int;
           description = "S3 expiry";
         };
 
@@ -87,6 +99,8 @@ in {
       description = "redsift daemon user";
       uid = config.zalora.daemonUids.redsift;
     };
+
+    zalora.smtpRelay.allowedSenders = [ cfg.emailSenderAddress ];
 
     systemd.services.redsift = {
       description = "redsift web application";

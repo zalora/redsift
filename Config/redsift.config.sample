@@ -16,6 +16,6 @@ s3 {
     expiry = 259200
   }
 
-gmail {
-    account = "csvLinkSender@gmail.com"
+email {
+    sender = "csvLinkSender@gmail.com"
   }
