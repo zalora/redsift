@@ -1,23 +1,83 @@
 { config, pkgs, ... }:
+
 let
+
   inherit (pkgs.lib) mkOption mkIf types;
 
   cfg = config.services.redsift;
+
+  configFile = pkgs.writeText "redsift.conf" ''
+    app {
+      port = ${toString cfg.port}
+      rowLimit = ${toString cfg.rowLimit}
+    }
+
+    db {
+      import "${cfg.redcatCredentialsFile}"
+    }
+
+    s3 {
+      bucket = "${cfg.s3.bucket}"
+      expiry = ${toString cfg.s3.expiry}
+      import "${cfg.s3.credentialsFile}"
+    }
+  '';
+
 in {
+  imports = [
+    <zalora-nix-lib/daemon-users-module.nix>
+  ];
+
   options = {
     services.redsift = {
       enable = mkOption {
         default = false;
-
         type = types.bool;
-
         description = "Enable redsift";
       };
 
       package = mkOption {
         type = types.package;
-
         description = "The built redsift package";
+      };
+
+      port = mkOption {
+        type = types.int;
+        default = 9000;
+        description = "The port to listen on";
+      };
+
+      rowLimit = mkOption {
+        type = types.int;
+        default = 100;
+        description = "Row limit setting";
+      };
+
+      redcatCredentialsFile = mkOption {
+        type = types.string;
+        description = ''
+          The path to a file containing connection details to the
+          Redcat DB.
+        '';
+      };
+
+      s3 = {
+        bucket = mkOption {
+          type = types.str;
+          description = "The S3 bucket that redsift should use";
+        };
+
+        expiry = mkOption {
+          type = types.str;
+          description = "S3 expiry";
+        };
+
+        credentialsFile = mkOption {
+          type = types.str;
+          description = ''
+            The path to a file containing S3 credentials.
+          '';
+        };
       };
     };
   };
@@ -25,23 +85,16 @@ in {
   config = mkIf cfg.enable {
     users.extraUsers.redsift = {
       description = "redsift daemon user";
-      uid = 1010;
-      home = "/home/redsift";
-      createHome = true;
+      uid = config.zalora.daemonUids.redsift;
     };
 
     systemd.services.redsift = {
       description = "redsift web application";
-
       wantedBy = [ "multi-user.target" ];
-
       serviceConfig = {
-        Type = "idle";
-        PIDFile = "/run/redsift.pid";
-        ExecStart = "${cfg.package}/bin/redsift";
+        ExecStart = "${cfg.package}/bin/redsift --config=${configFile}";
         Restart = "on-failure";
         User = "redsift";
-        WorkingDirectory = "${config.users.extraUsers.redsift.home}";
       };
     };
   };
