@@ -1,6 +1,6 @@
 module Redsift.Mail where
 
-import Network.Mail.Mime (Mail(..), renderSendMailCustom, plainPart)
+import Network.Mail.Mime (Mail(..), renderSendMail, plainPart)
 import System.IO
 import Data.String.Conversions
 
@@ -17,7 +17,7 @@ sendCSVExportMail config recipient url =
 
 sendMail :: EmailConfig -> Address -> String -> String -> IO ()
 sendMail (EmailConfig from) recipient subj body =
-    renderSendMailCustom "sendmail" ["-t"] $ Mail {
+    renderSendMail $ Mail {
             mailFrom = from,
             mailTo = [recipient],
             mailCc = [],
