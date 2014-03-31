@@ -10,7 +10,7 @@ import Control.Applicative
 import Data.Configurator as C
 import Data.Configurator.Types as C
 import Data.Text
-import Network.Mail.Mime
+import Network.Mail.Mime (Address(..))
 
 
 -- * Config Data Type
