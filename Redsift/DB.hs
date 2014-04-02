@@ -97,7 +97,7 @@ export dbConfig recipient reportName q s3Config emailConfig = do
                     let unload = unloadQuery s3Prefix s3Config (cs escapedQuery :: String)
                     Simple.execute_ db . fromString =<< prepareQuery recipient unload
                     processSuccessExport s3Prefix recipient s3Config emailConfig
-      return $ Aeson.toJSON $ Aeson.String "Your export request has been sent. The export URL will be sent to your email shortly."
+      return "Your export request has been sent. The export URL will be sent to your email shortly."
     Nothing -> throwUserException "The given query is not allowed."
 
 -- Generate S3 Location, based on current Date, current Time, export Name, and recipient Email
