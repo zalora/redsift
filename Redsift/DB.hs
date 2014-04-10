@@ -118,7 +118,8 @@ unloadQuery s3Prefix (S3Config bucket access secret _) query =
     ++ access
     ++ ";aws_secret_access_key="
     ++ secret
-    ++ "'ALLOWOVERWRITE GZIP;"
+    ++ "'ALLOWOVERWRITE GZIP"
+    ++ " ADDQUOTES;"
 
 -- Once Data is exported to S3, find the gz export, send email accordingly
 processSuccessExport :: String -> Address -> S3Config -> EmailConfig -> IO ()
