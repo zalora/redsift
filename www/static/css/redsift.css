@@ -10,10 +10,13 @@
   background-color: rgba(255,255,255,0.9);
   box-shadow: 1px 1px 5px #DDD;
   z-index: 10000;
-      }
+}
 .breadcrumbs {
   background-color: #FFF;
-  border: 0px
+  border: 0px;
+}
+.breadcrumbs li {
+  width: 100%;
 }
 .panel {
   background: none repeat scroll 0 0 #F2F2F2;

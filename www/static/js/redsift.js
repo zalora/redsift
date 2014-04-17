@@ -1,7 +1,7 @@
 var redSift = angular.module('myApp', []);
 redSift.service('queryData', function($http, $rootScope) {
   var baseURL = "api/query?q=",
-      exportURL = "api/export?e="
+      exportURL = "api/export?e=",
       tblData = {};
   return {
     getTables: function(db, tbl) {
