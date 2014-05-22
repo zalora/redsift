@@ -1,8 +1,8 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 let
 
-  inherit (pkgs.lib) mkOption mkIf types;
+  inherit (lib) mkOption mkIf types;
 
   cfg = config.services.redsift;
 
