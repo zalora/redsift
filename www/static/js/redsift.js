@@ -19,7 +19,7 @@ redSift.service('queryData', function($http, $rootScope) {
       });
     },
     getQuery: function(query) {
-      var url = baseURL + escape(query);
+      var url = baseURL + encodeURIComponent(query);
       $http.get(url).success(function(data, status, headers, config) {
         tblData.tblHeaders = data[0]
         tblData.tblRows = data.slice(1, data.length);
@@ -33,7 +33,7 @@ redSift.service('queryData', function($http, $rootScope) {
       });
     },
     exportQuery: function(query, fn) {
-      var url = exportURL + escape(query) + "&n=" + fn;
+      var url = exportURL + encodeURIComponent(query) + "&n=" + fn;
       $http.get(url).success(function(data, status, headers, config) {
         alert(data);
         $rootScope.$broadcast('exportRequestSent');
