@@ -3,6 +3,7 @@ redSift.service('queryData', function($http, $rootScope) {
   var baseURL = "api/query?q=",
       exportURL = "api/export?e=",
       tblData = {};
+
   return {
     getTables: function(db, tbl) {
       var url = baseURL + "SELECT * FROM " + db + "." + tbl + " LIMIT 100;";
@@ -14,8 +15,7 @@ redSift.service('queryData', function($http, $rootScope) {
 
         $rootScope.$broadcast('tblDataChanged', tblData);
       }).error(function(data, status, headers, config) {
-        alert("Error: could not process request - server returned " + status + ":" + data);
-        $rootScope.$broadcast('queryDataServerError');
+        $rootScope.$broadcast('queryDataServerError', data);
       });
     },
     getQuery: function(query) {
@@ -23,13 +23,10 @@ redSift.service('queryData', function($http, $rootScope) {
       $http.get(url).success(function(data, status, headers, config) {
         tblData.tblHeaders = data[0]
         tblData.tblRows = data.slice(1, data.length);
-        //tblData.dbName = db;
-        //tblData.tblName = tbl;
 
         $rootScope.$broadcast('tblDataChanged', tblData);
       }).error(function(data, status, headers, config) {
-        alert("Error: could not process request - server returned " + status + ":" + data);
-        $rootScope.$broadcast('queryDataServerError');
+        $rootScope.$broadcast('queryDataServerError', data);
       });
     },
     exportQuery: function(query, fn) {
@@ -38,20 +35,22 @@ redSift.service('queryData', function($http, $rootScope) {
         alert(data);
         $rootScope.$broadcast('exportRequestSent');
       }).error(function(data, status, headers, config) {
-        alert("Error: could not process request - server returned " + status + ":" + data);
-        $rootScope.$broadcast('queryDataServerError');
+        $rootScope.$broadcast('queryDataServerError', data);
       });
     }
   }
 });
+
 // controllers
 redSift.controller('MenuController',
   function($scope, $http, queryData) {
     $scope.menuState = {}
     $scope.menuState.show = false;
     $scope.isLocked = false;
+    $scope.isError = false;
     $scope.databases = [];
     $scope.statusMsg = "";
+    $scope.errorMsg = "";
     $scope.user_query = "";
     $scope.user_filename = "";
 
@@ -78,10 +77,12 @@ redSift.controller('MenuController',
       $('html, body').animate({ scrollTop: 0 }, 'fast');
       $scope.menuState.show = false;
       $scope.isLocked = true;
+      $scope.isError = false;
       $scope.statusMsg = "Please wait, " + ops + " " + tblName + "...";
     }
     $scope.unlockMenu = function() {
       $scope.isLocked = false;
+      $scope.isError = false;
     }
     $scope.loadTbl = function(dbName,tblName) {
       $scope.lockMenu("loading", tblName);
@@ -90,13 +91,17 @@ redSift.controller('MenuController',
     $scope.$on('tblDataChanged', function(event, tblData) {
       $scope.isLocked = false;
     });
-    $scope.$on('queryDataServerError', function(event) {
+    $scope.$on('queryDataServerError', function(event, msg) {
       $scope.isLocked = false;
+      $scope.isError = true;
+      $scope.errorMsg = msg;
     });
     $scope.$on('exportRequestSent', function(event) {
       $scope.isLocked = false;
+      $scope.isError = false;
     });
   });
+
 redSift.controller('DataViewController',
   function($scope, $timeout, queryData) {
     $scope.tblData = {}

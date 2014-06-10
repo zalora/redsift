@@ -24,9 +24,8 @@ throwUserException = throwIO . UserException
 
 errorHandler :: UserException -> IO Response
 errorHandler (UserException reason) = do
-    let msg = "server error: " ++ reason
-    hPutStrLn stderr msg
-    return $ responseLBS internalServerError500 [] (cs msg)
+    hPutStrLn stderr reason
+    return $ responseLBS internalServerError500 [] (cs reason)
 
 -- | Wraps the request handling of the given application
 -- to handle raised exceptions through the given error handler.
