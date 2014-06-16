@@ -26,6 +26,7 @@ executable redsift
   build-depends:       aeson,
                        MissingH,
                        base >=4.6 && <4.7,
+                       directory,
                        bytestring,
                        configurator,
                        containers,

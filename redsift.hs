@@ -1,6 +1,7 @@
 {-# language OverloadedStrings #-}
 module Main where
 
+import Control.Exception
 import Data.Aeson (ToJSON(..), encode)
 import Data.ByteString (ByteString)
 import Data.Maybe
@@ -13,7 +14,7 @@ import Network.Wai.Handler.Warp hiding (Connection)
 import Network.Wai.Application.Static
 import Network.Wai.UrlMap
 import Safe
-import System.FilePath
+import System.Directory
 import System.IO
 
 import Paths_redsift
@@ -46,6 +47,18 @@ optionsParser =
 defaultConfigFile :: FilePath
 defaultConfigFile = "./Config/redsift.config"
 
+-- | Chooses './www' if that exists, uses cabal's data-files mechanism
+-- otherwise.
+getDocumentRoot :: IO FilePath
+getDocumentRoot = do
+    wwwExists <- doesDirectoryExist "www"
+    if wwwExists then return "www"
+    else do
+        cabalDataDir <- getDataDir
+        cabalDataDirExists <- doesDirectoryExist cabalDataDir
+        if cabalDataDirExists then return cabalDataDir
+        else throwIO (ErrorCall "directory for static files not found.")
+
 
 -- * main entry function
 
@@ -54,7 +67,8 @@ main = do
     options <- execParser optionsParser
     redsiftConfig <- readRedsiftConfig (fromMaybe defaultConfigFile (config options))
     let port = appPort $ app redsiftConfig
-    documentRoot <- (</> "www") <$> getDataDir
+    documentRoot <- getDocumentRoot
+    hPutStrLn stderr ("serving static files from " ++ documentRoot)
     let settings =
             setPort port $
             setBeforeMainLoop (hPutStrLn stderr ("listening on port " ++ show port)) $
