@@ -72,6 +72,7 @@ main = do
     let settings =
             setPort port $
             setBeforeMainLoop (hPutStrLn stderr ("listening on port " ++ show port)) $
+            setFdCacheDuration 0 $
             defaultSettings
     runSettings settings $ handleApp errorHandler $
         mapUrls (redsiftApp redsiftConfig documentRoot)
