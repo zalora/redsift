@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Redsift.Mail where
 
 import Network.Mail.Mime (Mail(..), renderSendMail, plainPart)

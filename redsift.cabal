@@ -51,6 +51,4 @@ executable redsift
                        wai-extra >= 2.0.2,
                        warp >= 2.0
   default-language:    Haskell2010
-  other-extensions:    FlexibleInstances
-  default-extensions:  OverloadedStrings, ScopedTypeVariables
   ghc-options:         -Wall -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-unused-do-bind -fno-warn-name-shadowing -threaded -O2
