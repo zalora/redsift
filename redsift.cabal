@@ -47,7 +47,7 @@ executable redsift
                        text,
                        time,
                        utf8-string,
-                       wai >= 2.1,
+                       wai >= 3,
                        wai-app-static,
                        wai-extra >= 2.0.2,
                        warp >= 2.0

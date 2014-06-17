@@ -90,9 +90,9 @@ fileServerApp documentRoot =
 
 -- * api
 apiApp :: RedsiftConfig -> Application
-apiApp redsiftConfig request =
+apiApp redsiftConfig request cont = cont =<< do
     let dbConfig = db redsiftConfig
-    in case requestMethod request of
+    case requestMethod request of
         "GET" -> case pathInfo request of
             ["table", "list"] -> do
                 tables <- allTables dbConfig
