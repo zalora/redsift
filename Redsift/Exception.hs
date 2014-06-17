@@ -2,6 +2,7 @@
 module Redsift.Exception where
 
 import Control.Exception
+import Control.Monad
 import Data.Typeable
 import Data.Monoid
 import Network.Wai
@@ -31,8 +32,8 @@ errorHandler (UserException reason) = do
 -- to handle raised exceptions through the given error handler.
 handleApp :: Exception e =>
     (e -> IO Response) -> Application -> Application
-handleApp errorHandler app request =
-    handle errorHandler (app request)
+handleApp errorHandler app request cont =
+    handle (errorHandler >=> cont) (app request cont)
 
 -- Catches UserExceptions and mails them to the given receiver.
 mailUserExceptions :: EmailConfig -> Address -> IO a -> IO a
