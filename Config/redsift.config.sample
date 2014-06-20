@@ -10,7 +10,7 @@ db {
 }
 
 s3 {
-    bucket = "zalora-redsift-oregon"
+    bucket = "redsift-s3-bucket"
     access = "ABASDSAMPLEACESSKEY"
     secret = "312312YASDASAMPLESECRETKEY"
     expiry = 259200
