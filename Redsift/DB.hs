@@ -84,21 +84,16 @@ query dbConfig user q (AppConfig _ rowLimit) = withDB dbConfig $ \db -> withConn
 export :: DbConfig -> Address -> String -> String -> S3Config -> EmailConfig -> IO Aeson.Value
 export dbConfig recipient reportName q s3Config emailConfig = do
   s3Prefix <- createS3Prefix recipient reportName
-  -- 2147483647 as MaxLimit so that the result will be just one file on S3
-  -- refer to: https://bitbucket.org/zalorasea/redsift/issue/3/export-to-csv
-  case limitQuery 2147483647 q of
-    Just q -> do
-      forkIO $ mailUserExceptions emailConfig recipient $ mapExceptionIO sqlToUser $
-        withDB dbConfig $ \ db -> do
-            escapedQuery <- withConnection db $ \ raw -> PQ.escapeStringConn raw (cs q)
-            case escapedQuery of
-                Nothing -> throwUserException "query escaping failed"
-                Just escapedQuery -> do
-                    let unload = unloadQuery s3Prefix s3Config (cs escapedQuery :: String)
-                    Simple.execute_ db . fromString =<< prepareQuery recipient unload
-                    processSuccessExport s3Prefix recipient s3Config emailConfig
-      return "Your export request has been sent. The export URL will be sent to your email shortly."
-    Nothing -> throwUserException "The given query is not allowed."
+  forkIO $ mailUserExceptions emailConfig recipient $ mapExceptionIO sqlToUser $
+    withDB dbConfig $ \ db -> do
+        escapedQuery <- withConnection db $ \ raw -> PQ.escapeStringConn raw (cs q)
+        case escapedQuery of
+            Nothing -> throwUserException "query escaping failed"
+            Just escapedQuery -> do
+                let unload = unloadQuery s3Prefix s3Config (cs escapedQuery :: String)
+                Simple.execute_ db . fromString =<< prepareQuery recipient unload
+                processSuccessExport s3Prefix recipient s3Config emailConfig
+  return "Your export request has been sent. The export URL will be sent to your email shortly."
 
 -- Generate S3 Location, based on current Date, current Time, export Name, and recipient Email
 createS3Prefix :: Address -> String -> IO String
@@ -119,7 +114,8 @@ unloadQuery s3Prefix (S3Config bucket access secret _) query =
     ++ ";aws_secret_access_key="
     ++ secret
     ++ "'ALLOWOVERWRITE GZIP"
-    ++ " ADDQUOTES;"
+    ++ " ADDQUOTES"
+    ++ " PARALLEL OFF;"
 
 -- Once Data is exported to S3, find the gz export, send email accordingly
 processSuccessExport :: String -> Address -> S3Config -> EmailConfig -> IO ()
