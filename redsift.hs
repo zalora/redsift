@@ -2,8 +2,8 @@
 module Main where
 
 import Control.Exception
-import Data.Aeson (ToJSON(..), encode)
 import Data.ByteString (ByteString)
+import Data.Aeson (ToJSON(..), encode)
 import Data.Maybe
 import Data.String.Conversions
 import Filesystem.Path.CurrentOS (decodeString)
@@ -90,29 +90,29 @@ fileServerApp documentRoot =
 
 -- * api
 apiApp :: RedsiftConfig -> Application
-apiApp redsiftConfig request cont = cont =<< do
+apiApp redsiftConfig request respond = do
     let dbConfig = db redsiftConfig
     case requestMethod request of
         "GET" -> case pathInfo request of
             ["table", "list"] -> do
                 tables <- allTables dbConfig
-                return $ responseLBS ok200 [] (encode (toJSON tables))
+                respond $ responseLBS ok200 [] (encode (toJSON tables))
             ["query"] -> queryVarRequired (queryString request) "q" $ \ q -> do
                 result <- query dbConfig (getEmail request) (cs q) (app redsiftConfig)
-                return $ responseLBS ok200 [] (encode (toJSON result))
+                respond $ responseLBS ok200 [] (encode (toJSON result))
             ["export"] -> queryVarRequired (queryString request) "e" $ \ e ->
                 queryVarRequired (queryString request) "n" $ \ n -> do
                     result <- export dbConfig (getEmail request) (cs n) (cs e) (s3 redsiftConfig) (email redsiftConfig)
-                    return $ responseLBS ok200 [] (encode (toJSON result))
-            _ -> return notFoundError
-        _ -> return notFoundError
+                    respond $ responseLBS ok200 [] (encode (toJSON result))
+            _ -> respond notFoundError
+        _ -> respond notFoundError
     where
         getEmail :: Request -> Address
         getEmail request = Address Nothing $
             cs $ snd $ headNote "'From' header not set" $ filter (\header -> fst header == "From") (requestHeaders request)
         notFoundError = responseLBS notFound404 [] "404 not found"
 
-queryVarRequired :: Query -> ByteString -> (ByteString -> IO Response) -> IO Response
-queryVarRequired query key cont = case lookup key query of
-    Just (Just value) -> cont value
-    _ -> return $ responseLBS badRequest400 [] ("missing query var: " <> cs key)
+        queryVarRequired :: Query -> ByteString -> (ByteString -> IO ResponseReceived) -> IO ResponseReceived
+        queryVarRequired query key cont = case lookup key query of
+            Just (Just value) -> cont value
+            _ -> respond $ responseLBS badRequest400 [] ("missing query var: " <> cs key)

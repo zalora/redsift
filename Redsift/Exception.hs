@@ -33,8 +33,8 @@ errorHandler (UserException reason) = do
 -- to handle raised exceptions through the given error handler.
 handleApp :: Exception e =>
     (e -> IO Response) -> Application -> Application
-handleApp errorHandler app request cont =
-    handle (errorHandler >=> cont) (app request cont)
+handleApp errorHandler app request respond =
+    handle (errorHandler >=> respond) (app request respond)
 
 -- Catches UserExceptions and mails them to the given receiver.
 mailUserExceptions :: EmailConfig -> Address -> IO a -> IO a
