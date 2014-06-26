@@ -105,9 +105,9 @@ createS3Prefix recipient reportName = do
 -- Returns an UNLOAD statement for a given query.
 unloadQuery :: String -> S3Config -> String -> String
 unloadQuery s3Prefix (S3Config bucket access secret _) query =
-    "UNLOAD ('SELECT * FROM ("
+    "UNLOAD ('"
     ++ query
-    ++ " )') to '"
+    ++ "') to '"
     ++ "s3://" ++ bucket ++ "/" ++ s3Prefix
     ++ "' credentials 'aws_access_key_id="
     ++ access
