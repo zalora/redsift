@@ -15,6 +15,7 @@ import Network.Wai.Application.Static
 import Network.Wai.UrlMap
 import Safe
 import System.Directory
+import System.FilePath
 import System.IO
 
 import Paths_redsift
@@ -56,8 +57,9 @@ getDocumentRoot = do
     else do
         cabalDataDir <- getDataDir
         cabalDataDirExists <- doesDirectoryExist cabalDataDir
-        if cabalDataDirExists then return cabalDataDir
-        else throwIO (ErrorCall "directory for static files not found.")
+        if cabalDataDirExists
+            then return (cabalDataDir </> "www")
+            else throwIO (ErrorCall "directory for static files not found.")
 
 
 -- * main entry function
