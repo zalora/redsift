@@ -19,6 +19,7 @@ import Control.Applicative
 import Control.Exception (bracket)
 import Data.String
 import Data.String.Conversions
+import Data.Char (isAlphaNum)
 import Text.Printf
 import System.IO
 import Language.SQL.SimpleSQL.Parser
@@ -75,7 +76,7 @@ query dbConfig user q (AppConfig _ rowLimit) =
 -- * export CSV
 export :: DbConfig -> Address -> String -> String -> S3Config -> EmailConfig -> IO Aeson.Value
 export dbConfig recipient reportName q s3Config emailConfig = do
-  s3Prefix <- createS3Prefix recipient reportName
+  s3Prefix <- createS3Prefix recipient $ filter isAlphaNum reportName -- prevent reportName to have non-alpha nor non-numeric character
   forkIO $ mailUserExceptions emailConfig recipient $ mapExceptionIO sqlToUser $
     withDB dbConfig $ \ db -> do
         escapedQuery <- withConnection db $ \ raw -> PQ.escapeStringConn raw (cs q)
