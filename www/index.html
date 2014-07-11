@@ -35,7 +35,8 @@
         <div class="large-12 columns">
           <form>
             <div class="large-10 columns">
-              <input type="text" id="right-label" ng-model="user_query" placeholder="Your SQL query here.">
+              <textarea required="required"
+                  id="right-label" ng-model="user_query" placeholder="Your SQL query here."></textarea>
             </div>
             <div style="clear:both">
               <button style="margin-left:12px;" class="button small alert" ng-click="runQuery()">Query</button>
