@@ -136,7 +136,7 @@ prepareQuery user q = do
 
 parseQuery :: String -> Either String QueryExpr
 parseQuery q = case parseQueryExprs "<query>" Nothing q of
-    Left (ParseError msg _ _ _) -> Left msg
+    Left (ParseError _ _ _ msg) -> Left msg
     Right [singleQuery] -> Right singleQuery
     Right _ -> Left "Multiple queries is not allowed."
 
