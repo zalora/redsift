@@ -41,7 +41,6 @@ executable redsift
                        postgresql-simple,
                        safe,
                        mime-mail >= 0.4.4.2,
-                       simple-sql-parser >= 0.4.0,
                        split,
                        string-conversions,
                        system-filepath,
