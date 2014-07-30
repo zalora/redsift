@@ -11,7 +11,7 @@ import Database.PostgreSQL.Simple.Internal (withConnection)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Char (toLower)
-import Data.Time (getCurrentTime, utctDay, formatTime, UTCTime)
+import Data.Time (getCurrentTime, utctDay, formatTime)
 import Control.Concurrent (forkIO)
 import Network.AWS.S3Bucket
 import Network.AWS.AWSConnection
