@@ -91,8 +91,8 @@ export dbConfig recipient reportName q s3Config emailConfig = do
         case escapedQuery of
             Nothing -> throwUserException "query escaping failed"
             Just escapedQuery -> do
-                let unload = unloadQuery s3Prefix s3Config (cs escapedQuery :: String)
-                Simple.execute_ db . fromString =<< prepareQuery recipient unload
+                unload <- unloadQuery s3Prefix s3Config <$> prepareQuery recipient (cs escapedQuery :: String)
+                Simple.execute_ db $ fromString unload
                 processSuccessExport s3Prefix recipient s3Config emailConfig
   return "Your export request has been sent. The export URL will be sent to your email shortly."
 
