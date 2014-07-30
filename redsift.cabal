@@ -25,7 +25,7 @@ executable redsift
   main-is:             redsift.hs
   build-depends:       aeson,
                        MissingH,
-                       base >=4.6 && <4.7,
+                       base == 4.*,
                        directory,
                        bytestring,
                        configurator,
