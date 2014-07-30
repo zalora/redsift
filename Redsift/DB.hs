@@ -3,13 +3,14 @@ module Redsift.DB (allTables, Redsift.DB.query, export) where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.UTF8 as BU
-import Data.List (foldl')
+import Data.List (foldl', elemIndices)
 import Data.Maybe (fromJust)
 import qualified Database.PostgreSQL.LibPQ as PQ
 import Database.PostgreSQL.Simple as Simple
 import Database.PostgreSQL.Simple.Internal (withConnection)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import Data.Char (toLower)
 import Data.Time (getCurrentTime, utctDay, formatTime, UTCTime)
 import Control.Concurrent (forkIO)
 import Network.AWS.S3Bucket
@@ -17,13 +18,11 @@ import Network.AWS.AWSConnection
 import System.Locale
 import Control.Applicative
 import Control.Exception (bracket)
+import Safe
 import Data.String
 import Data.String.Conversions
 import Text.Printf
 import System.IO
-import Language.SQL.SimpleSQL.Parser
-import Language.SQL.SimpleSQL.Pretty
-import Language.SQL.SimpleSQL.Syntax
 
 import Redsift.Exception
 import Redsift.SignUrl
@@ -33,6 +32,7 @@ import Redsift.Config
 allTables :: DbConfig -> IO (Map.Map String [(String, Bool)])
 allTables dbConfig = withDB dbConfig $ \db -> foldl' f Map.empty `fmap` query_ db "SELECT table_schema, table_name, table_type = 'VIEW' FROM information_schema.tables ORDER BY table_schema, table_name DESC"
  where f tuples (schema, name, type') = Map.insertWith (++) schema [(name, type')] tuples
+
 -- As far as I can tell, postgresql-simple doesn't give us access to
 -- the underlying LibPQ result or allow us to access the column names,
 -- which is what I need here. I also want to get the results as
@@ -43,12 +43,13 @@ allTables dbConfig = withDB dbConfig $ \db -> foldl' f Map.empty `fmap` query_ d
 -- representing Null (especially in homogenous lists) without them.
 
 -- * issue general Query
+
 query :: DbConfig -> Address -> String -> AppConfig -> IO Aeson.Value
-query dbConfig user q (AppConfig _ rowLimit) =
-  case limitQuery rowLimit q of
-    Left err -> throwUserException err
-    Right safeQuery -> withDB dbConfig $ \db -> withConnection db $ \db' -> do
-        r' <- PQ.exec db' . BU.fromString =<< prepareQuery user safeQuery
+query dbConfig user q (AppConfig _ rowLimit) = withDB dbConfig $ \db -> withConnection db $ \db' ->
+  if isSingleQuery q then do
+    case (limitQuery rowLimit q) of
+      Just query -> do
+        r' <- PQ.exec db' . BU.fromString =<< prepareQuery user query
         case r' of
           Nothing -> do
             err <- (BU.toString . fromJust) `fmap` PQ.errorMessage db'
@@ -61,7 +62,13 @@ query dbConfig user q (AppConfig _ rowLimit) =
               _ -> do
                 err <- (BU.toString . fromJust) `fmap` PQ.resultErrorMessage r
                 throwUserException err
-  where tuples r = do
+      Nothing -> throwUserException "The given query is not allowed."
+  else throwUserException "Multiple queries is not allowed."
+  where isSingleQuery q
+          |';' `notElem` q = True -- No semicolons
+          | head (elemIndices ';' q) == length q - 1 = True -- Make sure nothing is behind the first semicolon
+          | otherwise = False
+        tuples r = do
           nTuples <- PQ.ntuples r
           nFields <- PQ.nfields r
           names <- mapM (\x -> fromJust `fmap` PQ.fname r x) [0 .. nFields - 1]
@@ -73,6 +80,7 @@ query dbConfig user q (AppConfig _ rowLimit) =
                       Just s -> Aeson.String $ Text.pack $ BU.toString s
 
 -- * export CSV
+
 export :: DbConfig -> Address -> String -> String -> S3Config -> EmailConfig -> IO Aeson.Value
 export dbConfig recipient reportName q s3Config emailConfig = do
   s3Prefix <- createS3Prefix recipient reportName
@@ -134,17 +142,21 @@ prepareQuery user q = do
     hPutStrLn stderr ("redcat query: " ++ withUserComment)
     return withUserComment
 
-parseQuery :: String -> Either String QueryExpr
-parseQuery q = case parseQueryExprs "<query>" Nothing q of
-    Left (ParseError _ _ _ msg) -> Left msg
-    Right [singleQuery] -> Right singleQuery
-    Right _ -> Left "Multiple queries is not allowed."
-
--- XXX: While simple-sql-parser does not support limit, we append it unconditionally
-limitQuery :: Int -> String -> Either String String
-limitQuery limit q = case parseQuery q of
-    Left msg -> Left msg
-    Right queryExpr -> Right $ (prettyQueryExpr queryExpr) ++ " limit " ++ (show limit)
+-- In case User's Defined Query doesn't limit number of rows, or return too many rows than allowed
+-- For this method, query q is assumed to have AT MOST one semicolon,
+-- otherwise it would result in error in the query function
+-- NOTE: if a query can't be "limited" -> return Nothing as it is most likely user error!
+limitQuery :: Int -> String -> Maybe String
+limitQuery limit q = let qAsList = words $ filter (/=';') q in
+                     case (fmap (map toLower) (qAsList `atMay` (length qAsList - 2))) of
+                        Just "limit" -> case (qAsList `atMay` (length qAsList - 1)) of
+                            Just m -> case readMay m of
+                              Just n -> if n > limit then Just $ unwords $ init qAsList ++ [show limit]
+                                        else Just $ unwords qAsList
+                              Nothing -> Nothing
+                            Nothing -> Nothing
+                        Just _ -> Just $ unwords $ qAsList ++ ["limit", show limit]
+                        Nothing -> Nothing
 
 -- Make sure a connection is closed after we finished with the query.
 withDB :: DbConfig -> (Connection -> IO a) -> IO a
