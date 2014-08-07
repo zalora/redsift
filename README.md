@@ -1,46 +1,31 @@
-## Redsift: 
+## What is Redsift
 
-Web interface to redshift for exploring the data
+Redsift is a web interface to [Redshift](http://aws.amazon.com/redshift/)
+for exploring the data.
 
-## Pre-requisites
+## Requirements
 
-* postgresql:
-    
-On OS X:
-    
-    brew install --no-tcl postgresql    
+Redsift is written in Haskell with [GHC](http://www.haskell.org/ghc/).
+Using GHC of version at least 7.4 is recommended.
 
-On Ubuntu:
-    
-    sudo apt-get install postgresql-client
+All requried Haskell libraries are listed in redsift.cabal.
+Use [cabal-install](http://www.haskell.org/haskellwiki/Cabal-Install)
+to fetch and build all pre-requisites automatically.
 
-With ~/.pgpass:
-
-    <host>:<port>:<db>:<user>:<password>
-
-* lighttpd:
-
-On OS X: 
-
-    brew install lighttpd
-
-On Ubuntu:
-    
-    sudo apt-get install lighttpd
+The postgresql-libpq package requires PostgreSQL client library (libpq).
 
 ## Installation
 
-Using GHC of version at least 7.4 is recommended. Also, using cabal-dev to build up a virtual environment is a good practice. To install it using cabal-install
-
-    cabal update
-    cabal install cabal-dev
-
 Then do the following:
 
-    git clone <this repository>
+    git clone https://github.com/zalora/redsift.git
+    cd redsift
     cabal install
+
+## Configuration
+
+See sample configuration file under the Config directory.
 
 ## Run
 
-    $ sudo lighttpd -D -f /home/location/to/lighttpd.conf
-    $ redsift
+    redsift -c <config file>
