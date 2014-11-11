@@ -100,11 +100,11 @@ apiApp redsiftConfig request respond = do
                 tables <- allTables dbConfig
                 respond $ responseLBS ok200 [] (encode (toJSON tables))
             ["query"] -> queryVarRequired (queryString request) "q" $ \ q -> do
-                result <- query dbConfig (getEmail request) (cs q) (app redsiftConfig)
+                result <- query dbConfig (getEmail request) (toRsQuery $ cs q) (app redsiftConfig)
                 respond $ responseLBS ok200 [] (encode (toJSON result))
             ["export"] -> queryVarRequired (queryString request) "e" $ \ e ->
                 queryVarRequired (queryString request) "n" $ \ n -> do
-                    result <- export dbConfig (getEmail request) (cs n) (cs e) (s3 redsiftConfig) (email redsiftConfig)
+                    result <- export dbConfig (getEmail request) (cs n) (toRsQuery $ cs e) (s3 redsiftConfig) (email redsiftConfig)
                     respond $ responseLBS ok200 [] (encode (toJSON result))
             _ -> respond notFoundError
         _ -> respond notFoundError
