@@ -5,7 +5,7 @@ module Redsift.DB (allTables, Redsift.DB.query, export, toRsQuery, RsQuery) wher
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.UTF8 as BU
-import Data.List (foldl', elemIndices)
+import Data.List (foldl', elemIndices, intercalate)
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Database.PostgreSQL.LibPQ as PQ
 import Database.PostgreSQL.Simple as Simple
@@ -54,8 +54,8 @@ allTables dbConfig = withDB dbConfig $ \db -> foldl' f Map.empty `fmap` query_ d
 query :: DbConfig -> Address -> RsQuery -> AppConfig -> IO Aeson.Value
 query dbConfig user q (AppConfig _ rowLimit) = withDB dbConfig $ \db -> withConnection db $ \db' ->
   if isSingleQuery q then do
-     let wrappedQuery = limitQuery rowLimit q
-     r' <- PQ.exec db' . BU.fromString . unlines . queryStrings =<< prepareQuery user wrappedQuery
+     wrappedQuery <- limitQuery rowLimit <$> prepareQuery user q
+     r' <- PQ.exec db' . BU.fromString . unlines . queryStrings $ wrappedQuery
      case r' of
        Nothing -> do
          err <- (BU.toString . fromJust) `fmap` PQ.errorMessage db'
@@ -155,7 +155,7 @@ prepareQuery :: Address -> RsQuery -> IO RsQuery
 prepareQuery user q@RsQuery{ queryStrings } = do
     let withUserComment =
             printf "/* redsift query for user '%s' */ " (cs (addressEmail user) :: String) ++
-            unlines queryStrings
+            intercalate " " queryStrings
     hPutStrLn stderr ("redcat query: " ++ withUserComment)
     return q
 
