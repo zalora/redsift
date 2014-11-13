@@ -94,14 +94,14 @@ isSingleQuery RsQuery{ queryStrings } = noSemicolon || firstSemicolonIsLastChar
 export :: DbConfig -> Address -> String -> RsQuery -> S3Config -> EmailConfig -> IO Aeson.Value
 export dbConfig recipient reportName q s3Config emailConfig = do
   s3Prefix <- createS3Prefix recipient $ filter isAlphaNum reportName -- prevent reportName to have non-alpha nor non-numeric character
-  forkIO $ mailUserExceptions emailConfig recipient $ mapExceptionIO sqlToUser $
+  _ <- forkIO $ mailUserExceptions emailConfig recipient $ mapExceptionIO sqlToUser $
     withDB dbConfig $ \ db -> do
         escapedQuery <- withConnection db $ \ raw -> escapeRsQuery raw q
         case escapedQuery of
             Nothing -> throwUserException "query escaping failed"
             Just escapedQuery -> do
                 unload <- unloadQuery s3Prefix s3Config <$> prepareQuery recipient escapedQuery
-                Simple.execute_ db $ fromString unload
+                _ <- Simple.execute_ db $ fromString unload
                 processSuccessExport s3Prefix recipient s3Config emailConfig
   return "Your export request has been sent. The export URL will be sent to your email shortly."
 
