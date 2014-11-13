@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Redsift.DB where
 
@@ -96,8 +97,7 @@ export dbConfig recipient reportName q s3Config emailConfig = do
   s3Prefix <- createS3Prefix recipient $ filter isAlphaNum reportName -- prevent reportName to have non-alpha nor non-numeric character
   _ <- forkIO $ mailUserExceptions emailConfig recipient $ mapExceptionIO sqlToUser $
     withDB dbConfig $ \ db -> do
-        escapedQuery <- withConnection db $ \ raw -> escapeRsQuery raw q
-        case escapedQuery of
+        withConnection db (\ raw -> escapeRsQuery raw q) >>= \case
             Nothing -> throwUserException "query escaping failed"
             Just escapedQuery -> do
                 unload <- unloadQuery s3Prefix s3Config <$> prepareQuery recipient escapedQuery
