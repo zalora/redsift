@@ -35,6 +35,12 @@ spec = do
           table2
         |]
         isSingleQuery (toRsQuery q) `shouldBe` False
+      it "is false for multiple line query with two semicolons" $ do
+        let q = [i|
+          foo;
+          bar;
+        |]
+        isSingleQuery (toRsQuery q) `shouldBe` False
 
     describe "wrap limit around query" $ do
       let rsq = toRsQuery [i|
