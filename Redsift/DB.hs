@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Redsift.DB (allTables, Redsift.DB.query, export, toRsQuery, RsQuery) where
+module Redsift.DB where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.UTF8 as BU
-import Data.List (foldl', elemIndices, intercalate)
+import Data.List (foldl', elemIndices, intercalate, delete)
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Database.PostgreSQL.LibPQ as PQ
 import Database.PostgreSQL.Simple as Simple
@@ -83,7 +83,7 @@ query dbConfig user q (AppConfig _ rowLimit) = withDB dbConfig $ \db -> withConn
 isSingleQuery :: RsQuery -> Bool
 isSingleQuery RsQuery{ queryStrings } = noSemicolon || firstSemicolonIsLastChar
   where
-    queryString              = unlines queryStrings
+    queryString              = intercalate "\n" queryStrings
     firstSemicolonIndex      = headMay . elemIndices ';' $ queryString
     lastIndex                = length queryString - 1
     noSemicolon              = ';' `notElem` queryString
@@ -161,7 +161,7 @@ prepareQuery user q@RsQuery{ queryStrings } = do
 
 -- Wrap user query with limit
 limitQuery :: Int -> RsQuery -> RsQuery
-limitQuery limit RsQuery{ queryStrings } = RsQuery $ ["SELECT * FROM ("] ++ queryStrings ++ [") LIMIT " ++ show limit]
+limitQuery limit RsQuery{ queryStrings } = RsQuery $ ["SELECT * FROM ("] ++ map (delete ';') queryStrings ++ [") LIMIT " ++ show limit]
 
 -- Make sure a connection is closed after we finished with the query.
 withDB :: DbConfig -> (Connection -> IO a) -> IO a

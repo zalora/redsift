@@ -54,3 +54,38 @@ executable redsift
                        warp
   default-language:    Haskell2010
   ghc-options:         -Wall -fno-warn-missing-signatures -fno-warn-type-defaults -fno-warn-unused-do-bind -fno-warn-name-shadowing -threaded -O2
+
+test-suite redsiftspec
+  type:
+      exitcode-stdio-1.0
+  ghc-options:
+      -Wall -threaded
+  default-language:
+      Haskell2010
+  hs-source-dirs:
+      test, .
+  main-is:
+      Spec.hs
+  build-depends:
+      base == 4.*,
+      hspec2,
+      interpolate,
+      configurator,
+      text,
+      mime-mail,
+      aeson,
+      utf8-string,
+      postgresql-libpq,
+      postgresql-simple,
+      containers,
+      time,
+      hS3,
+      old-locale,
+      safe,
+      wai,
+      http-types,
+      HTTP,
+      network-uri,
+      filepath,
+      string-conversions
+
