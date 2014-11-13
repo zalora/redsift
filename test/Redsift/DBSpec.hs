@@ -9,7 +9,7 @@ import Data.String.Interpolate.IsString
 spec :: Spec
 spec = do
   context "function on RsQuery" $ do
-    describe "single query check" $ do
+    describe "isSingleQuery" $ do
       it "is true for single line query without semicolon" $
         isSingleQuery (toRsQuery "select * from table") `shouldBe` True
       it "is true for single line query with semicolon" $
@@ -42,7 +42,7 @@ spec = do
         |]
         isSingleQuery (toRsQuery q) `shouldBe` False
 
-    describe "wrap limit around query" $ do
+    describe "limitedQueryStrings" $ do
       let rsq = toRsQuery [i|
         SELECT *
         FROM table1;
