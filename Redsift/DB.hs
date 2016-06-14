@@ -18,7 +18,7 @@ import Data.Time (getCurrentTime, utctDay, formatTime)
 import Control.Concurrent (forkIO)
 import Network.AWS.S3Bucket
 import Network.AWS.AWSConnection
-import System.Locale
+import Data.Time.Format
 import Control.Applicative
 import Control.Exception (bracket)
 import Safe

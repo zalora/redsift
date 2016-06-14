@@ -88,7 +88,7 @@ redsiftApp redsiftConfig documentRoot =
 -- * file serving
 fileServerApp :: FilePath -> Application
 fileServerApp documentRoot =
-    staticApp (defaultFileServerSettings (decodeString (documentRoot ++ "/")))
+    staticApp (defaultFileServerSettings ((documentRoot ++ "/")))
 
 -- * api
 apiApp :: RedsiftConfig -> Application
