@@ -52,5 +52,5 @@ executable redsift
                        wai-extra,
                        warp >= 3.2
   default-language:    Haskell2010
-  ghc-options:         -Wall -threaded
+  ghc-options:         -Wall -threaded -static
 
