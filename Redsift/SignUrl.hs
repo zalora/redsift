@@ -42,12 +42,13 @@ signUrl (accessKey, secretKey) bucket object expirationTime =
 -- (I think that buckets as subdomains are called endpoints.)
 convertToEndpointURI :: URI -> URI
 convertToEndpointURI input = case input of
-    URI{uriAuthority = Just (URIAuth userInfo regName port), uriPath} ->
+    URI{uriAuthority = Just (URIAuth userInfo regName _), uriPath} ->
         case splitDirectories uriPath of
             ("/" : bucket : rest) ->
                 input{
+                    uriScheme = "https:",
                     uriAuthority = Just $ URIAuth userInfo
-                        (bucket ++ "." ++ regName) port,
+                        (bucket ++ "." ++ regName) "",
                     uriPath = joinPath ("/" : rest)
                 }
             _ -> error ("convertToEndpointURI: uri should start with /$BUCKET: " ++ show input)
