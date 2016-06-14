@@ -6,7 +6,6 @@ module Redsift.Config (
     Address(..),
   ) where
 
-import Control.Applicative
 import Data.Configurator as C
 import Data.Configurator.Types as C
 import Data.Text

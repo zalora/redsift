@@ -14,12 +14,11 @@ import Database.PostgreSQL.Simple.Internal (withConnection)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import Data.Char (isAlphaNum)
-import Data.Time (getCurrentTime, utctDay, formatTime)
+import Data.Time (getCurrentTime, utctDay)
 import Control.Concurrent (forkIO)
 import Network.AWS.S3Bucket
 import Network.AWS.AWSConnection
 import Data.Time.Format
-import Control.Applicative
 import Control.Exception (bracket)
 import Safe
 import Data.String

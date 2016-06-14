@@ -6,11 +6,10 @@ import Data.ByteString (ByteString)
 import Data.Aeson (ToJSON(..), encode)
 import Data.Maybe
 import Data.String.Conversions
-import Filesystem.Path.CurrentOS (decodeString)
 import Options.Applicative
 import Network.HTTP.Types
 import Network.Wai
-import Network.Wai.Handler.Warp hiding (Connection)
+import Network.Wai.Handler.Warp
 import Network.Wai.Application.Static
 import Network.Wai.UrlMap
 import Safe
@@ -33,10 +32,10 @@ data Options = Options {
 
 optionsParser :: ParserInfo Options
 optionsParser =
-    info (helper <*> (Options <$> config)) fullDesc
+    info (helper <*> (Options <$> cfg)) fullDesc
   where
-    config :: Parser (Maybe FilePath)
-    config = mkOptional $ strOption (
+    cfg :: Parser (Maybe FilePath)
+    cfg = mkOptional $ strOption (
         long "config" <>
         short 'c' <>
         metavar "CONFIGFILE" <>
@@ -88,7 +87,7 @@ redsiftApp redsiftConfig documentRoot =
 -- * file serving
 fileServerApp :: FilePath -> Application
 fileServerApp documentRoot =
-    staticApp (defaultFileServerSettings ((documentRoot ++ "/")))
+    staticApp (defaultFileServerSettings (documentRoot ++ "/"))
 
 -- * api
 apiApp :: RedsiftConfig -> Application
@@ -110,11 +109,11 @@ apiApp redsiftConfig request respond = do
         _ -> respond notFoundError
     where
         getEmail :: Request -> Address
-        getEmail request = Address Nothing $
-            cs $ snd $ headNote "'From' header not set" $ filter (\header -> fst header == "From") (requestHeaders request)
+        getEmail r = Address Nothing $
+            cs $ snd $ headNote "'From' header not set" $ filter (\h -> fst h == "From") (requestHeaders r)
         notFoundError = responseLBS notFound404 [] "404 not found"
 
         queryVarRequired :: Query -> ByteString -> (ByteString -> IO ResponseReceived) -> IO ResponseReceived
-        queryVarRequired query key cont = case lookup key query of
-            Just (Just value) -> cont value
+        queryVarRequired q key cont = case lookup key q of
+            Just (Just v) -> cont v
             _ -> respond $ responseLBS badRequest400 [] ("missing query var: " <> cs key)
